@@ -1,2 +1,2 @@
 from .graph import NetworkGraph 
-from .drawer import NetworkDrawer 
+from .drawer import PlotNetwork 

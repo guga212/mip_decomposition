@@ -14,10 +14,7 @@ sd_dict = random_network.GetSrcDstDict()
 a_list = random_network.GetArcList()
 c_dict = random_network.GetCapacityParam()
 
-# draw network
-network_drawer = net.NetworkDrawer(random_network)
-
-# show network
-network_drawer.Show()
+# plot network
+network_drawer = net.PlotNetwork(random_network)
 
 print("exit 0")

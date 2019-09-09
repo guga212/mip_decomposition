@@ -16,9 +16,18 @@ class NetworkGraph:
         """Add points of interset (source, destination). """
 
         self.src_dst_list = list(args)
-        for i in range(len(self.src_dst_list)):
-            nx.set_node_attributes(self.network_graph, {self.src_dst_list[i][0]: {'src': f'src_node_{i}'} } )
-            nx.set_node_attributes(self.network_graph, {self.src_dst_list[i][1]: {'dst': f'dst_node_{i}'} } )
+
+        nodes_attr = {}
+        for indx, node_pair in enumerate(self.src_dst_list):
+            if node_pair[0] in nodes_attr:
+                nodes_attr[node_pair[0]].update( { f'flow_src_{indx}': f'src_node_{indx}' } )
+            else:
+                nodes_attr[node_pair[0]] = { f'flow_src_{indx}': f'src_node_{indx}' }
+            if node_pair[1] in nodes_attr:
+                nodes_attr[node_pair[1]].update( { f'flow_dst_{indx}': f'dst_node_{indx}' } )
+            else:
+                nodes_attr[node_pair[1]] = { f'flow_dst_{indx}': f'dst_node_{indx}' }
+        nx.set_node_attributes(self.network_graph, nodes_attr)
         self.flow_list.extend([ 0 for i in range(len(self.src_dst_list))])
 
     def SetPath(self, *args):
