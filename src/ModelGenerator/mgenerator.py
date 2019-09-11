@@ -1,8 +1,10 @@
 from .amodel import ARoutingStrainModel
 
 class RsModelGenerator:
-    def __init__(self, var_mk = None, obj_mk = None, constr_mk = None):
+    def __init__(self, *args):
         self.amodel = ARoutingStrainModel()
+        for arg in args:
+            arg(self.amodel.model)
     def CreateInstance(self, flows, src_dst, nodes, arcs, capacity, flw_bounds):
 
         init_data = {None: {

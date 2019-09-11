@@ -1,6 +1,8 @@
 import networkx as nx
 import numpy as np
-import numpy.random as rnd
+import random as rnd
+import numpy.random as nrnd
+
 
 
 class NetworkGraph:
@@ -12,11 +14,31 @@ class NetworkGraph:
         self.capacity_min = 0
         self.capacity_max = 0        
 
+    def SetRandomSeed(seed):
+        rnd.seed(seed)
+        nrnd.seed(seed)
+
     def SetSrcDst(self, *args):
         """Add points of interset (source, destination). """
 
         self.src_dst_list = list(args)
 
+        indx_del = 0
+        while True:
+            flow_src_attr_prev = nx.get_node_attributes(self.network_graph, f'flow_src_{indx_del}')
+            flow_dst_attr_prev = nx.get_node_attributes(self.network_graph, f'flow_dst_{indx_del}')
+            nmb_flow_src_attr_prev = len(flow_src_attr_prev)
+            nmb_flow_dst_attr_prev = len(flow_dst_attr_prev)
+            if nmb_flow_src_attr_prev > 0:
+                for k in flow_src_attr_prev:
+                    nx.edges(self.network_graph)[k].pop(f'flow_src_{indx_del}')
+            if nmb_flow_dst_attr_prev > 0:
+                for k in flow_dst_attr_prev:
+                    nx.edges(self.network_graph)[k].pop(f'flow_dst_{indx_del}')
+            if (nmb_flow_src_attr_prev + nmb_flow_dst_attr_prev) == 0:
+                break
+            indx_del += 1
+        
         nodes_attr = {}
         for indx, node_pair in enumerate(self.src_dst_list):
             if node_pair[0] in nodes_attr:
@@ -32,6 +54,11 @@ class NetworkGraph:
 
     def SetPath(self, *args):
         """Add the pathes (arcs belongin to the same route). """
+
+        path_attr_prev = nx.get_edge_attributes(self.network_graph, 'path')
+        if len(path_attr_prev) > 0:
+            for k in path_attr_prev:
+                nx.edges(self.network_graph)[k].pop('path')
 
         self.path_list = list(args)
         for path_nmb, path in enumerate(self.path_list):
@@ -60,7 +87,7 @@ class NetworkGraph:
             src_dst_list[i] = src_dest_cand 
 
             while src_dest_cand in src_dst_list:
-                rnd.shuffle(nodes_array)
+                nrnd.shuffle(nodes_array)
                 src_node = nodes_array[0]
                 dst_node = nodes_array[1]
                 src_dest_cand  = (src_node, dst_node)
@@ -68,9 +95,8 @@ class NetworkGraph:
 
             #add arc to the graph if it doesn't exist
             if not nx.has_path(self.network_graph, src_node, dst_node):
-                nx.add_path(self.network_graph, src_dst_list[i], capacity = np.around((self.capacity_max - self.capacity_min)*rnd.ranf()+self.capacity_min, 3))        
+                nx.add_path(self.network_graph, src_dst_list[i], capacity = np.around((self.capacity_max - self.capacity_min)*nrnd.ranf()+self.capacity_min, 3))        
         self.SetSrcDst(*src_dst_list)
-
 
     def GetNodeList(self):
         """Return list of nodes"""
@@ -124,7 +150,7 @@ class NetworkGraph:
 
         network_graph = nx.gnm_random_graph(nodes_nmb, edges_nmb, directed=True)
         
-        nx.set_edge_attributes(network_graph, {edge: np.around((capacity_max - capacity_min)*rnd.ranf()+capacity_min, 3) for edge in nx.edges(network_graph)}, name='capacity')
+        nx.set_edge_attributes(network_graph, {edge: np.around((capacity_max - capacity_min)*nrnd.ranf()+capacity_min, 3) for edge in nx.edges(network_graph)}, name='capacity')
         self = cls(network_graph)
         self.capacity_min = capacity_min
         self.capacity_max = capacity_max
