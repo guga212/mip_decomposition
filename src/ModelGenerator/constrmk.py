@@ -72,10 +72,7 @@ def ReformulatedConstraintsGenerator():
         def SingleFlowConstrain(model, flow, node):
             """Only one flow leaves the node. """
             
-            sum_eq = 1 if node == model.Dst[flow] else 0
-            return 0 \
-            + sum(model.FlowRoute[flow, i, node] for i in model.NodesOut[node]) \
-            <= 1
+            return sum(model.FlowRoute[flow, node, i] for i in model.NodesOut[node]) <= 1            
         a_model.ConstrSingleFlow = pyo.Constraint(a_model.Flows, a_model.Nodes, rule = SingleFlowConstrain)
 
         def FlowStrainMulRouteConstraint1(model, flow, node_s, node_d):
