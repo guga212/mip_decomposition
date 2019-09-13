@@ -27,8 +27,11 @@ nmg_alt = mg.RsModelGenerator(mg.LinearObjectiveGenerator(), mg.ReformulatedCons
 rsm_base_instance = nmg.CreateInstance(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
 rsm_base_instance_alt = nmg_alt.CreateInstance(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
 
-#solve problem
+#initialize solvers
 opt_glpk = sm.milpsolvers.GlpkSolver()
+opt_cplex = sm.miqppsolver.CplexSolver()
+opt_couenne = sm.minlpsolvers.CouenneSolver()
+
 objective, strains, routes, solver_output = opt_glpk.Solve(rsm_base_instance)
 objective_alt, strains_alt, routes_alt, solver_output_alt = opt_glpk.Solve(rsm_base_instance_alt)
 
