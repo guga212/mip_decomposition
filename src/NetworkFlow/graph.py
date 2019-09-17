@@ -55,14 +55,27 @@ class NetworkGraph:
     def SetPath(self, *args):
         """Add the pathes (arcs belongin to the same route). """
 
-        path_attr_prev = nx.get_edge_attributes(self.network_graph, 'path')
-        if len(path_attr_prev) > 0:
-            for k in path_attr_prev:
-                nx.edges(self.network_graph)[k].pop('path')
+
+        indx_del = 0
+        while True:
+            path_attr_prev = nx.get_edge_attributes(self.network_graph, f'path_{indx_del}')
+            nmb_path_attr_prev = len(path_attr_prev)
+            if nmb_path_attr_prev > 0:
+                for k in path_attr_prev:
+                    nx.edges(self.network_graph)[k].pop(f'path_{indx_del}')
+            if (nmb_path_attr_prev) == 0:
+                break
+            indx_del += 1
 
         self.path_list = list(args)
-        for path_nmb, path in enumerate(self.path_list):
-            nx.set_edge_attributes(self.network_graph, {edge : { 'path' : f'path_{path_nmb}'} for edge in path } )
+        edges_attr = {}
+        for path_nmb, path_list in enumerate(self.path_list):
+            for path in path_list:
+                if path in edges_attr:
+                    edges_attr[path].update( { f'path_{path_nmb}' : f'path_{path_nmb}' } )
+                else:
+                    edges_attr[path] = { f'path_{path_nmb}' : f'path_{path_nmb}' }
+        nx.set_edge_attributes(self.network_graph, edges_attr)
 
     def SetFlows(self, *args):
         """Assign to flow values given arguments"""

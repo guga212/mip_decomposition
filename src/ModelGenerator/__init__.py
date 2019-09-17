@@ -1,5 +1,5 @@
 from .mgenerator import RsModelGenerator
-from .objmk import LinearObjectiveGenerator, QuadObjectiveGenerator
+from .objmk import LinearObjectiveGenerator, QuadObjectiveGenerator, NonlinearObjectiveGenerator
 from .constrmk import RouteConstraintsGenerator
 from .constrmk import LinearCapacityConstraintsGenerator, NonlinearCapacityConstraintsGenerator
 from .constrmk import ReformulatedConstraintsGenerator

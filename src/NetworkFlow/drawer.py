@@ -3,7 +3,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 
-def PlotNetwork(network):
+def PlotNetwork(network, name):
     width_mul = 3
     #create figure, subplots and layout
     flow_nmb = len(network.GetFlowList())
@@ -11,6 +11,7 @@ def PlotNetwork(network):
     nrow = math.ceil((flow_nmb / ncol))
     fig, axes = plt.subplots(nrow, ncol)
     plt.figure(fig.number)
+    fig.suptitle(name)
     pos = nx.kamada_kawai_layout(network.network_graph)
     
     #draw graph on the multiple plot
@@ -34,8 +35,8 @@ def PlotNetwork(network):
         width_list = [1 + width_mul*c/network.capacity_max for c in capacity_list]
         nx.draw_networkx_edges(network.network_graph, pos, width=width_list )
         #draw edges in path
-        path_edges = [edge for edge, path in nx.get_edge_attributes(network.network_graph, 'path').items()
-                        if path == f'path_{flow_indx}']
+        path_edges = [edge for edge, path in nx.get_edge_attributes(network.network_graph, f'path_{flow_indx}').items()]
+        
         width_path = 1
         if(flow_val != 0):
             width_path = 1 + width_mul*flow_val/network.capacity_max
@@ -63,5 +64,6 @@ def PlotNetwork(network):
         nx.draw_networkx_edges(network.network_graph, pos, width=width_list )
     
     #show drawed plot
-    plt.show(block=True)
-        
+    plt.show(block = False)
+def ShowAll():
+    plt.show(block = True)
