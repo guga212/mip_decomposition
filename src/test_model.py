@@ -1,5 +1,4 @@
 import ModelGenerator as mg
-
 import NetworkFlow as net
 import SolverManager as sm
 
@@ -23,21 +22,21 @@ c_dict = network.GetCapacityParam()
 nmg = mg.RsModelGenerator(mg.LinearObjectiveGenerator(), mg.RouteConstraintsGenerator(), mg.LinearCapacityConstraintsGenerator())
 nmg_alt = mg.RsModelGenerator(mg.QuadObjectiveGenerator(), mg.ReformulatedConstraintsGenerator())
 
-#create model instance from the generator
-rsm_base_instance = nmg.CreateInstance(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
-rsm_base_instance_alt = nmg_alt.CreateInstance(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
+#create models from the generator
+rsm_model = nmg.CreateModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
+rsm_model_alt = nmg_alt.CreateModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
 
 #initialize solvers
 opt_glpk = sm.milpsolvers.GlpkSolver()
 opt_cplex = sm.miqppsolver.CplexSolver()
 opt_couenne = sm.minlpsolvers.CouenneSolver()
 
-objective, strains, routes, solver_output = opt_couenne.Solve(rsm_base_instance)
-objective_alt, strains_alt, routes_alt, solver_output_alt = opt_cplex.Solve(rsm_base_instance_alt)
+objective, strains, routes, solver_output = opt_couenne.Solve(rsm_model.cmodel)
+objective_alt, strains_alt, routes_alt, solver_output_alt = opt_cplex.Solve(rsm_model_alt.cmodel)
 
 #validate constraints violations
-viol = mg.FindConstraintsViolation(rsm_base_instance)
-viol_alt = mg.FindConstraintsViolation(rsm_base_instance_alt)
+viol = mg.FindConstraintsViolation(rsm_model.cmodel)
+viol_alt = mg.FindConstraintsViolation(rsm_model_alt.cmodel)
 
 #compare solutions
 eq1 = (objective == objective_alt)
