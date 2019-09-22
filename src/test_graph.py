@@ -5,7 +5,6 @@ random_network = net.NetworkGraph.GenerateRandom(8, 64, 0, 5)
 
 # modify network
 random_network.SetSrcDst((2,3),(3, 4))
-random_network.GenerateRandomSrcDst(2)    
 
 # test graph getter funcitions
 n_list = random_network.GetNodeList()
@@ -15,6 +14,8 @@ a_list = random_network.GetArcList()
 c_dict = random_network.GetCapacityParam()
 
 # plot network
-network_drawer = net.PlotNetwork(random_network)
+net.drawer.PlotNetwork(random_network, "Test graph")
 
-print("exit 0")
+#show all drawn
+net.drawer.ShowAll()
+
