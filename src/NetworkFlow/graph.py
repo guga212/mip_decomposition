@@ -6,6 +6,11 @@ import numpy.random as nrnd
 
 
 class NetworkGraph:
+    @staticmethod
+    def SetRandomSeed(seed):
+        rnd.seed(seed)
+        nrnd.seed(seed)
+
     def __init__(self, graph):
         self.network_graph = graph
         self.flow_list = []
@@ -13,10 +18,6 @@ class NetworkGraph:
         self.path_list = []
         self.capacity_min = 0
         self.capacity_max = 0        
-
-    def SetRandomSeed(seed):
-        rnd.seed(seed)
-        nrnd.seed(seed)
 
     def SetSrcDst(self, *args):
         """Add points of interset (source, destination). """
@@ -82,7 +83,7 @@ class NetworkGraph:
 
         self.flow_list = list(args)
         if len(self.flow_list) != len(self.src_dst_list):
-            raise Exception("Flows number must be equal to src dst number")
+            raise Exception('Flows number must be equal to src dst number')
     
     def GenerateRandomSrcDst(self, pair_nmb):
         """Create specified number of the random tuples: (source, destination). """

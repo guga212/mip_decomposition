@@ -1,1 +1,2 @@
-from .FlowDecomposer import FlowDecomposition
+from .gendec import GeneralDecomposer
+from .flowdec import FlowDecomposer

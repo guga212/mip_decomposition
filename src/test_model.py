@@ -31,8 +31,11 @@ opt_glpk = sm.milpsolvers.GlpkSolver()
 opt_cplex = sm.miqppsolver.CplexSolver()
 opt_couenne = sm.minlpsolvers.CouenneSolver()
 
-objective, strains, routes, solver_output = opt_couenne.Solve(rsm_model.cmodel)
-objective_alt, strains_alt, routes_alt, solver_output_alt = opt_cplex.Solve(rsm_model_alt.cmodel)
+solution = opt_couenne.Solve(rsm_model.cmodel)
+objective, strains, routes = ( solution['Objective'], solution['Strain'], solution['Route'] )
+
+soultion_alt= opt_cplex.Solve(rsm_model_alt.cmodel)
+objective_alt, strains_alt, routes_alt = ( soultion_alt['Objective'], soultion_alt['Strain'], soultion_alt['Route'] )
 
 #validate constraints violations
 viol = mg.FindConstraintsViolation(rsm_model.cmodel)

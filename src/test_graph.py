@@ -14,7 +14,7 @@ a_list = random_network.GetArcList()
 c_dict = random_network.GetCapacityParam()
 
 # plot network
-net.drawer.PlotNetwork(random_network, "Test graph")
+net.drawer.PlotNetwork(random_network, 'Test graph')
 
 #show all drawn
 net.drawer.ShowAll()
