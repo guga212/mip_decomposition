@@ -21,7 +21,7 @@ def FindConstraintsViolation(model):
 
     def ConstraintRoute(flow, node):
         violations = 0
-        sum_eq = - 1 if node == src[flow] else + 1 if node == dst[flow] else 0
+        sum_eq = -1 if node == src[flow] else 1 if node == dst[flow] else 0
         violations = + sum(route_val[flow][(i, node)] for i in nodes_in[node]) \
                      - sum(route_val[flow][(node, j)] for j in nodes_out[node]) \
                      - sum_eq

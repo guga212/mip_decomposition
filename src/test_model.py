@@ -1,6 +1,7 @@
 import ModelGenerator as mg
 import NetworkFlow as net
 import SolverManager as sm
+import ModelProcessors as mp
 
 #random network
 net.NetworkGraph.SetRandomSeed(231)
@@ -23,8 +24,8 @@ nmg = mg.RsModelGenerator(mg.LinearObjectiveGenerator(), mg.RouteConstraintsGene
 nmg_alt = mg.RsModelGenerator(mg.QuadObjectiveGenerator(), mg.ReformulatedConstraintsGenerator())
 
 #create models from the generator
-rsm_model = nmg.CreateModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
-rsm_model_alt = nmg_alt.CreateModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
+rsm_model = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
+rsm_model_alt = nmg_alt.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
 
 #initialize solvers
 opt_glpk = sm.milpsolvers.GlpkSolver()
@@ -38,8 +39,8 @@ soultion_alt= opt_cplex.Solve(rsm_model_alt.cmodel)
 objective_alt, strains_alt, routes_alt = ( soultion_alt['Objective'], soultion_alt['Strain'], soultion_alt['Route'] )
 
 #validate constraints violations
-viol = mg.FindConstraintsViolation(rsm_model.cmodel)
-viol_alt = mg.FindConstraintsViolation(rsm_model_alt.cmodel)
+viol = mp.FindConstraintsViolation(rsm_model.cmodel)
+viol_alt = mp.FindConstraintsViolation(rsm_model_alt.cmodel)
 
 #compare solutions
 eq1 = (objective == objective_alt)

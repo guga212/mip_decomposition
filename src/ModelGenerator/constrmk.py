@@ -20,7 +20,7 @@ def AddConstraint(amodel, constr_name, expr_rule, comp_op, *constr_sets):
 def RouteConstraintsGenerator():
     def RouteConstraintsMaker(amodel):
         def ConstraintRouteExprRule(model, flow, node):
-            sum_eq = - 1 if node == model.Src[flow] else + 1 if node == model.Dst[flow] else 0
+            sum_eq = -1 if node == model.Src[flow] else 1 if node == model.Dst[flow] else 0
             return 0 \
             + sum(model.FlowRoute[flow, i, node] for i in model.NodesIn[node]) \
             - sum(model.FlowRoute[flow, node, j] for j in model.NodesOut[node]) \
@@ -49,21 +49,20 @@ def LinearCapacityConstraintsGenerator():
         amodel.FlowStrainMulRoute = pyo.Var(amodel.Flows, amodel.Arcs, domain = pyo.NonNegativeReals)
 
         def FlowStrainMulRouteConstraint1ExprRule(model, flow, node_s, node_d):
-            """Help variable greater or equal to the flow if route exitst otherwise greater or equal to the minus upper flow value. """
+            """Help variable is greater or equal to the flow if the route exist. """
             return -model.FlowStrainMulRoute[flow, node_s, node_d] + model.FlowStrain[flow] \
-                    + M_MULT * model.FlowUb*(model.FlowRoute[flow, node_s, node_d] - 1)
+                    + M_MULT * model.FlowUb * (model.FlowRoute[flow, node_s, node_d] - 1)
         AddConstraint(amodel, 'FlowStrainMulRouteConstraint1', FlowStrainMulRouteConstraint1ExprRule, '<=', amodel.Flows, amodel.Arcs)
 
         def FlowStrainMulRouteConstraint3ExprRule(model, flow, node_s, node_d):
-            """Help variable less or equal to the flow. """
-            return model.FlowStrainMulRoute[flow, node_s, node_d] - model.FlowStrain[flow] \
-                    - model.FlowStrain[flow]
+            """Help variable is less or equal to the flow. """
+            return model.FlowStrainMulRoute[flow, node_s, node_d] - model.FlowStrain[flow]
         AddConstraint(amodel, 'FlowStrainMulRouteConstraint3', FlowStrainMulRouteConstraint3ExprRule, '<=', amodel.Flows, amodel.Arcs)
 
         def FlowStrainMulRouteConstraint4ExprRule(model, flow, node_s, node_d):
-            """Help variable less or equal to the upper flow if route exitst otherwise less or equal to the. """
-            return model.FlowStrainMulRoute[flow, node_s, node_d] - model.FlowStrain[flow] \
-                    - M_MULT * model.FlowUb*model.FlowRoute[flow, node_s, node_d]
+            """Help variable is less or equal zero if the route doesn't exitst. """
+            return model.FlowStrainMulRoute[flow, node_s, node_d] \
+                    - M_MULT * model.FlowUb * model.FlowRoute[flow, node_s, node_d]
         AddConstraint(amodel, 'FlowStrainMulRouteConstraint4', FlowStrainMulRouteConstraint4ExprRule, '<=', amodel.Flows, amodel.Arcs)
 
         def ConstraintCapacityExprRule(model, node_s, node_d):
@@ -77,7 +76,11 @@ def LinearCapacityConstraintsGenerator():
 
 def ReformulatedConstraintsGenerator():
     def ReformulatedConstraintsMaker(amodel):
-
+        """
+        Binary route variables for this formualation are 
+        unable to force a flow, but the are able to prevent the flow.
+        """
+        
         amodel.FlowStrainMulRoute = pyo.Var(amodel.Flows, amodel.Arcs, domain = pyo.NonNegativeReals)
         
         def ConstraintRouteExprRule(model, flow, node):
