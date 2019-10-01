@@ -46,7 +46,7 @@ class GeneralDecomposer:
         """
 
         total_time = 0
-        n_iter_max = 10
+        n_iter_max = 40
         n_iter = 0
 
         def SolveLocal():

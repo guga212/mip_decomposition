@@ -7,8 +7,8 @@ import Coordinators as cr
 
 #random network
 net.NetworkGraph.SetRandomSeed(666)
-network = net.NetworkGraph.GenerateRandom(6, 12, 0, 2)
-network.GenerateRandomSrcDst(2)
+network = net.NetworkGraph.GenerateRandom(6, 18, 0, 2)
+network.GenerateRandomSrcDst(6)
 
 #get network params
 n_list = network.GetNodeList()
@@ -66,3 +66,6 @@ net.PlotNetwork(network, 'TEST RECOVERED')
 
 #show all plots
 net.drawer.ShowAll()
+
+
+debug_stop = 1
