@@ -17,7 +17,7 @@ def FindConstraintsViolation(model):
     src = [pyo.value(model.Src[flow]) for flow in model.Flows]
     dst = [pyo.value(model.Dst[flow]) for flow in model.Flows]
     strain_val = [pyo.value(model.FlowStrain[flow]) for flow in model.Flows]
-    route_val =[ { arc : pyo.value(model.FlowRoute[flow, arc]) for arc in model.Arcs } for flow in model.Flows ]
+    route_val = [ { arc : pyo.value(model.FlowRoute[flow, arc]) for arc in model.Arcs } for flow in model.Flows ]
 
     def ConstraintRoute(flow, node):
         violations = 0

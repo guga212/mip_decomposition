@@ -5,7 +5,7 @@ from .relax import RelaxConstraints
 from .gendec import GeneralDecomposer
 
 class FlowDecomposer(GeneralDecomposer):
-    def __init__(self, rs_model, coordinator_cls, binding_constraint_name = 'CapacityConstraint'):
+    def __init__(self, rs_model, coordinator, binding_constraint_name = 'CapacityConstraint'):
         """
         Specialization of the general decomposer.
         Relaxes capacity constraints. Decomposes
@@ -21,4 +21,4 @@ class FlowDecomposer(GeneralDecomposer):
             init_data_local[None]['Src'] = { k: v for k, v in init_data_local[None]['Src'].items() if k == flow}
             init_data_local[None]['Dst'] = { k: v for k, v in init_data_local[None]['Dst'].items() if k == flow}
             decompose_group_init_data.append(init_data_local)
-        super().__init__(rs_model, [(relaxed_constraint_name, relaxed_constraint_range)], decompose_group_init_data, coordinator_cls)
+        super().__init__(rs_model, [(relaxed_constraint_name, relaxed_constraint_range)], decompose_group_init_data, coordinator)

@@ -17,6 +17,7 @@ class StopCriterion:
             slope = (self.values_arch[0] - self.values_arch[-1]) / self.values_arch.maxlen
             if ~self.slope_compare_function(slope, self.slope_req):
                 self.excess_nmb += 1
+                self.values_arch.clear()
             else:
                 self.excess_nmb = 0
     def PutValue(self, value):

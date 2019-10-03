@@ -1,14 +1,18 @@
+from .gradstep import IStepRule
 from .stopcrit import StopCriterion
 import pyomo.environ as pyo
 import copy as cp
 
 class CoordinatorGradient:
-    def __init__(self, amodel_local, relaxed_constraints_names):
+
+    def __init__(self, step_rule = IStepRule()):
 
         self.iterating = False
         self.n_iter = 0
-        self.step = 0.001
+        self.step_rule = step_rule
         self.relaxation_names = []
+    
+    def UpgradeModel(self, amodel_local, relaxed_constraints_names):
 
         for names in relaxed_constraints_names:
             relaxed_constraint_name = names[0]
@@ -35,35 +39,31 @@ class CoordinatorGradient:
         amodel_local.Obj.deactivate()        
         amodel_local.ObjDual = pyo.Objective(rule = ObjectiveDualRule, sense = pyo.minimize)
         amodel_local.ObjDual.activate()
-    
-    def SetBest(self, cmodel):
+
+    def GenerateSolvingPolciy(self, local_nmb):
+        def SolvingPolicy(solve):
+            for indx in range(local_nmb):
+                if solve(indx) == False:
+                    return False
+        self.solving_policy = SolvingPolicy
+        return self.solving_policy
+
+    def RetrieveBest(self):
         if self.best_solution is None:
             return None
+        return self.best_solution[2]
+
+    def InitCoordination(self, cmodel):
+        self.best_solution = ( float('-inf'), None )
+        self.obj_stop_crit = StopCriterion(0.001, 4, 2, lambda slope, slope_req: slope >= slope_req)
+        self.lagr_mult_stop = []
         for names in self.relaxation_names:
-            LagrangianMultipliers = getattr(cmodel, names[2])
-            relaxed_set = getattr(cmodel, names[1])
-            lm_best = self.best_solution[1][names[0]]
-            for indx in relaxed_set:
-                LagrangianMultipliers[indx] = lm_best[indx]
-        return True
+            for _ in range(len(getattr(cmodel, names[1]))):
+                sc = StopCriterion(0.0001, 6, 2, lambda slope, slope_req: slope >= slope_req or slope <= -slope_req)
+                self.lagr_mult_stop.append(sc)
+        self.iterating = True            
 
-    def Iterate(self, cmodel):
-
-        #init iterations parameters
-        if self.iterating == False:
-            self.best_solution = ( float('-inf'), None )
-            self.obj_stop_crit = StopCriterion(0.01, 4, 2, lambda slope, slope_req: slope >= slope_req)
-            self.lagr_mult_stop = []
-            for names in self.relaxation_names:
-                for _ in range(len(getattr(cmodel, names[1]))):
-                    sc = StopCriterion(0.001, 3, 1, lambda slope, slope_req: slope >= slope_req or slope <= -slope_req)
-                    self.lagr_mult_stop.append(sc)
-            self.iterating = True            
-
-        #update iteration number
-        self.n_iter += 1
-
-        #get objective value
+    def UpdateIterationData(self, cmodel):
         obj_val = pyo.value(cmodel.ObjDual)
         self.obj_stop_crit.PutValue(obj_val) 
 
@@ -77,9 +77,15 @@ class CoordinatorGradient:
                 for indx in relaxed_set:
                     lm_value[indx] = pyo.value(LagrangianMultipliers[indx])
                 LagrangianMultipliersBestValues[names[0]] = lm_value
-            self.best_solution = (obj_val, LagrangianMultipliersBestValues)
+            self.best_solution = (obj_val, LagrangianMultipliersBestValues, cp.deepcopy(cmodel))
 
-        #update multipliers
+        #update iteration
+        self.n_iter += 1
+
+        #update step
+        self.step = self.step_rule.GetStep(cmodel)
+
+    def UpdateMultipliers(self, cmodel):
         indx_sc = 0
         for names in self.relaxation_names:
             relaxed_constraint = getattr(cmodel,  names[0])
@@ -96,15 +102,22 @@ class CoordinatorGradient:
                 self.lagr_mult_stop[indx_sc].PutValue(pyo.value(LagrangianMultipliers[indx]))
                 indx_sc += 1
 
-        #exit condition checks
+    def CheckExit(self):
         obj_stop = self.obj_stop_crit.CheckStop()
         lm_stop = sum([int(sc.CheckStop()) for sc in self.lagr_mult_stop]) == len(self.lagr_mult_stop)
         if obj_stop or lm_stop:
             return True
- 
+
+    def Coordinate(self, cmodel):
+        if self.iterating == False:
+            self.InitCoordination(cmodel)
+        self.UpdateIterationData(cmodel)
+        self.UpdateMultipliers(cmodel)
+        if self.CheckExit() == True:
+            return True
         return False
 
-    def ResetIteration(self):
+    def ResetCoordination(self):
         self.iterating = False
         self.n_iter = 0
         self.step = 0.001

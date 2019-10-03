@@ -4,7 +4,7 @@ from .relax import RelaxConstraints
 
 class GeneralDecomposer:
     
-    def __init__(self, rs_model, relaxed_constraints_data, decomposed_group_init_data, coordinator_cls):
+    def __init__(self, rs_model, relaxed_constraints_data, decomposed_group_init_data, coordinator):
         """
         General decomposer process given model. It uses relaxed constraint data 
         to generate relaxed version of the mode. After this it decompose model in to
@@ -28,13 +28,18 @@ class GeneralDecomposer:
         RelaxConstraints(self.amodel_local, relaxed_constraints_names)
 
         #initialize coordinator
-        self.coordinator = coordinator_cls(self.amodel_local, relaxed_constraints_names)
+        self.coordinator = coordinator
+        self.coordinator.UpgradeModel(self.amodel_local, relaxed_constraints_names)
 
         #create concrete models
         self.cmodel = self.amodel_local.create_instance(data = rs_model.init_data)
         self.cmodels_local = []
         for init_data_local in decomposed_group_init_data:
-            self.cmodels_local.append(self.amodel_local.create_instance(data = init_data_local))        
+            self.cmodels_local.append(self.amodel_local.create_instance(data = init_data_local))
+
+        #get the policy for the local problem solving
+        self.local_solving_manager = self.coordinator.GenerateSolvingPolciy(len(self.cmodels_local))
+        
     
     def Solve(self, master_solver, local_solvers):
         """
@@ -45,23 +50,21 @@ class GeneralDecomposer:
         coordination problem.
         """
 
-        total_time = 0
-        n_iter_max = 40
-        n_iter = 0
+        self.total_time = 0
+        self.n_iter = 0
+        self.n_iter_max = 100
 
-        def SolveLocal():
-            cur_solver_indx = 0
-            for cm_loc in self.cmodels_local:
-                if cur_solver_indx > len(local_solvers):
-                    cur_solver = local_solvers[-1]
-                else:
-                    cur_solver = local_solvers[cur_solver_indx]
-                solution = cur_solver.Solve(cm_loc)
-                nonlocal total_time
-                total_time += solution['Time']
-                if solution is None:
-                    return False
+        def SolveLocal(indx):
+            cur_solver = local_solvers[indx]
+            solution = cur_solver.Solve(self.cmodels_local[indx])
+            if solution is None:
+                return False
+            self.total_time += solution['Time']
             return True
+
+        def SolveLocalAll():
+            for indx in range(len(self.cmodels_local)):
+                SolveLocal(indx)
 
         def Compose():
             for cm_loc in self.cmodels_local:
@@ -72,27 +75,25 @@ class GeneralDecomposer:
 
         def Decompose():
             for cm_loc in self.cmodels_local:
-                for lp in cm_loc.component_objects(pyo.Param, active=True):
+                for lp in cm_loc.component_objects(pyo.Param, active = True):
                     if lp._mutable:
                         p = getattr(self.cmodel, lp.name)
                         for index in lp:
-                            lp[index] = p[index]
+                            lp[index] = pyo.value(p[index])
 
+        SolveLocalAll()
         while True:
-            if SolveLocal() is False:
+            if self.local_solving_manager(SolveLocal) == False:
                 return None
             Compose()
-            coord_ret = self.coordinator.Iterate(self.cmodel)
+            coord_ret = self.coordinator.Coordinate(self.cmodel)
             Decompose()
-            if coord_ret or (n_iter >= n_iter_max):
+            if coord_ret or (self.n_iter >= self.n_iter_max):
                 break
-            n_iter += 1
-        self.coordinator.SetBest(self.cmodel)
-        Decompose()
-        SolveLocal()
-        Compose()
+            self.n_iter += 1
+        self.cmodel = self.coordinator.RetrieveBest()
 
         ret_val = master_solver.ExtractSolution(self.cmodel)
         ret_val = { 'Objective dual' : ret_val[0], 'Objective': pyo.value(self.cmodel.Obj),
-                    'Strain': ret_val[1], 'Route': ret_val[2], 'Time': total_time }
+                    'Strain': ret_val[1], 'Route': ret_val[2], 'Time': self.total_time }
         return ret_val
