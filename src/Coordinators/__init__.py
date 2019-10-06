@@ -1,3 +1,4 @@
 from .coordgrad import CoordinatorGradient
 from .coordsurgrad import CoordinatorSurrogateGradient
+from .coordsurgrad import CoordinatorFsaGradient
 from .gradstep import ConstantStepRule, DiminishingFractionRule

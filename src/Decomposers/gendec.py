@@ -38,7 +38,7 @@ class GeneralDecomposer:
             self.cmodels_local.append(self.amodel_local.create_instance(data = init_data_local))
 
         #get the policy for the local problem solving
-        self.local_solving_manager = self.coordinator.GenerateSolvingPolciy(len(self.cmodels_local))
+        self.local_solving_manager = self.coordinator.GenerateSolvingPolicy()
         
     
     def Solve(self, master_solver, local_solvers):
@@ -53,18 +53,19 @@ class GeneralDecomposer:
         self.total_time = 0
         self.n_iter = 0
         self.n_iter_max = 100
+        self.local_solvers = { cml: local_solvers[indx] for indx, cml in enumerate(self.cmodels_local) }
 
-        def SolveLocal(indx):
-            cur_solver = local_solvers[indx]
-            solution = cur_solver.Solve(self.cmodels_local[indx])
+        def SolveLocal(cmodel_local):
+            cur_solver = self.local_solvers[cmodel_local]
+            solution = cur_solver.Solve(cmodel_local)
             if solution is None:
                 return False
             self.total_time += solution['Time']
             return True
 
         def SolveLocalAll():
-            for indx in range(len(self.cmodels_local)):
-                SolveLocal(indx)
+            for cml in self.cmodels_local:
+                SolveLocal(cml)
 
         def Compose():
             for cm_loc in self.cmodels_local:
@@ -83,13 +84,13 @@ class GeneralDecomposer:
 
         SolveLocalAll()
         while True:
-            if self.local_solving_manager(SolveLocal) == False:
-                return None
             Compose()
             coord_ret = self.coordinator.Coordinate(self.cmodel)
-            Decompose()
             if coord_ret or (self.n_iter >= self.n_iter_max):
                 break
+            Decompose()
+            if self.local_solving_manager(SolveLocal, self.cmodels_local) == False:
+                return None
             self.n_iter += 1
         self.cmodel = self.coordinator.RetrieveBest()
 

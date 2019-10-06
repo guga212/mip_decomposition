@@ -29,7 +29,11 @@ soultion_orig = opt_glpk.Solve(rs_model.cmodel)
 objective_orig, strains_orig, routes_orig = ( soultion_orig['Objective'], soultion_orig['Strain'], soultion_orig['Route'] )
 
 #create flow decomposer
-flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorGradient)
+
+#flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorGradient(step_rule=cr.gradstep.DiminishingFractionRule(0.1, 20)))
+#flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorSurrogateGradient(step_rule=cr.gradstep.DiminishingFractionRule(0.01, 10)))
+flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorFsaGradient(step_rule=cr.gradstep.DiminishingFractionRule(0.01, 10)))
+
 solution_dec = flow_dec.Solve( opt_glpk, [opt_glpk for _ in f_list] )
 objective_dec, strains_dec, routes_dec, time_dec = ( solution_dec['Objective'], solution_dec['Strain'], 
                                         solution_dec['Route'], solution_dec['Time'] )
@@ -66,6 +70,5 @@ net.PlotNetwork(network, 'TEST RECOVERED')
 
 #show all plots
 net.drawer.ShowAll()
-
 
 debug_stop = 1

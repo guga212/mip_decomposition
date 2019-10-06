@@ -28,22 +28,25 @@ class CoordinatorGradient:
             ret_val = obj_rule(model)
             for names in self.relaxation_names:
                 relaxed_constraint = getattr(model, names[0])
-                relaxed_constraint_expr = model.Suffix[relaxed_constraint][0]                
+                relaxed_constraint_expr_lhs = model.Suffix[relaxed_constraint]['LHS']
+                relaxed_constraint_expr_rhs = model.Suffix[relaxed_constraint]['RHS']
                 relaxed_set = getattr(model, names[1])
                 lagrange_mult = getattr(model, names[2])
                 if relaxed_set.is_constructed() == False:
                     relaxed_set.construct()
-                ret_val += sum( [ lagrange_mult[arg] * relaxed_constraint_expr(model, *arg) for arg in relaxed_set ] )
+                ret_val += sum( [ lagrange_mult[arg] * (relaxed_constraint_expr_lhs(model, *arg) - 
+                                                            relaxed_constraint_expr_rhs(model, *arg)) 
+                                    for arg in relaxed_set ] )
             return ret_val
             
         amodel_local.Obj.deactivate()        
         amodel_local.ObjDual = pyo.Objective(rule = ObjectiveDualRule, sense = pyo.minimize)
         amodel_local.ObjDual.activate()
 
-    def GenerateSolvingPolciy(self, local_nmb):
-        def SolvingPolicy(solve):
-            for indx in range(local_nmb):
-                if solve(indx) == False:
+    def GenerateSolvingPolicy(self):
+        def SolvingPolicy(solve, cmodels_local):
+            for cml in cmodels_local:
+                if solve(cml) == False:
                     return False
         self.solving_policy = SolvingPolicy
         return self.solving_policy
@@ -63,21 +66,24 @@ class CoordinatorGradient:
                 self.lagr_mult_stop.append(sc)
         self.iterating = True            
 
+    def SetBestSolution(self, cmodel):
+        LagrangianMultipliersBestValues = {}
+        for names in self.relaxation_names:
+            lm_value = {}
+            relaxed_set = getattr(cmodel, names[1])
+            LagrangianMultipliers = getattr(cmodel, names[2])
+            for indx in relaxed_set:
+                lm_value[indx] = pyo.value(LagrangianMultipliers[indx])
+            LagrangianMultipliersBestValues[names[0]] = lm_value
+        self.best_solution = (pyo.value(cmodel.ObjDual), LagrangianMultipliersBestValues, cp.deepcopy(cmodel))
+
     def UpdateIterationData(self, cmodel):
         obj_val = pyo.value(cmodel.ObjDual)
         self.obj_stop_crit.PutValue(obj_val) 
 
         #write down the best solution
         if(self.best_solution[0] < obj_val):
-            LagrangianMultipliersBestValues = {}
-            for names in self.relaxation_names:
-                lm_value = {}
-                relaxed_set = getattr(cmodel, names[1])
-                LagrangianMultipliers = getattr(cmodel, names[2])
-                for indx in relaxed_set:
-                    lm_value[indx] = pyo.value(LagrangianMultipliers[indx])
-                LagrangianMultipliersBestValues[names[0]] = lm_value
-            self.best_solution = (obj_val, LagrangianMultipliersBestValues, cp.deepcopy(cmodel))
+            self.SetBestSolution(cmodel)
 
         #update iteration
         self.n_iter += 1
@@ -90,11 +96,13 @@ class CoordinatorGradient:
         for names in self.relaxation_names:
             relaxed_constraint = getattr(cmodel,  names[0])
             relaxed_set = getattr(cmodel, names[1])
-            relaxed_constraint_expr = cmodel.Suffix[relaxed_constraint][0]
-            relaxed_constraint_sign = cmodel.Suffix[relaxed_constraint][1]
+            relaxed_constraint_expr_lhs = cmodel.Suffix[relaxed_constraint]['LHS']
+            relaxed_constraint_expr_rhs = cmodel.Suffix[relaxed_constraint]['RHS']
+            relaxed_constraint_sign = cmodel.Suffix[relaxed_constraint]['CompareName']
             LagrangianMultipliers = getattr(cmodel, names[2])
             for indx in relaxed_set:
-                gradient = pyo.value(relaxed_constraint_expr(cmodel, *indx))
+                gradient = pyo.value(relaxed_constraint_expr_lhs(cmodel, *indx) - 
+                                        relaxed_constraint_expr_rhs(cmodel, *indx))
                 lm_incr = pyo.value(LagrangianMultipliers[indx]) + self.step * gradient
                 if relaxed_constraint_sign == '<=':
                     lm_incr = max(0, lm_incr)

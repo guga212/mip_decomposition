@@ -7,36 +7,48 @@ Comparsions = {
     }
 
 
-def AddConstraint(amodel, constr_name, expr_rule, comp_op, *constr_sets):
-    def ConstraintRule(model, *args):
-        return Comparsions[comp_op](expr_rule(model, *args), 0)
+def AddConstraint(amodel, constr_name, expr_lhs, expr_rhs, comp_op, *constr_sets):
+    if callable(expr_rhs):
+        def ConstraintRule(model, *args):
+            return Comparsions[comp_op](expr_lhs(model, *args), expr_rhs(model, *args))
+    else:
+        expr_rhs_value = expr_rhs
+        def expr_rhs_proxy(*args):
+            return expr_rhs_value
+        expr_rhs = expr_rhs_proxy
+        def ConstraintRule(model, *args):
+            return Comparsions[comp_op](expr_lhs(model, *args), expr_rhs_value)
+
     constraint = pyo.Constraint(*constr_sets, rule = ConstraintRule, name = constr_name)
     setattr(amodel, constr_name, constraint)
 
     model_constraint = getattr(amodel, constr_name)
-    amodel.Suffix[model_constraint] = (expr_rule, comp_op)
+    amodel.Suffix[model_constraint] = { 'LHS': expr_lhs, 'RHS': expr_rhs, 
+                                        'CompareName': comp_op, 'CompareOperation': Comparsions[comp_op] }
 
 
 def RouteConstraintsGenerator():
     def RouteConstraintsMaker(amodel):
-        def ConstraintRouteExprRule(model, flow, node):
-            sum_eq = -1 if node == model.Src[flow] else 1 if node == model.Dst[flow] else 0
+        def ConstraintRouteExprRuleLHS(model, flow, node):
             return 0 \
             + sum(model.FlowRoute[flow, i, node] for i in model.NodesIn[node]) \
-            - sum(model.FlowRoute[flow, node, j] for j in model.NodesOut[node]) \
-            - sum_eq                        
-        AddConstraint(amodel, 'RouteConstraint', ConstraintRouteExprRule, '==', amodel.Flows, amodel.Nodes)
+            - sum(model.FlowRoute[flow, node, j] for j in model.NodesOut[node])
+        def ConstraintRouteExprRuleRHS(model, flow, node):
+            sum_eq = -1 if node == model.Src[flow] else 1 if node == model.Dst[flow] else 0
+            return sum_eq
+        AddConstraint(amodel, 'RouteConstraint', ConstraintRouteExprRuleLHS, 
+                        ConstraintRouteExprRuleRHS, '==', amodel.Flows, amodel.Nodes)
     return RouteConstraintsMaker
 
 
 def NonlinearCapacityConstraintsGenerator():
     def NonlinearCapacityConstraintsMaker(amodel):
-        def ConstraintCapacityExprRule(model, node_s, node_d):
-            return sum(model.FlowStrain[flow] * model.FlowRoute[flow, node_s, node_d] for flow in model.Flows) \
-            - model.Capacity[node_s, node_d]
-        amodel.ConstraintCapacityExprRule = ConstraintCapacityExprRule
-        amodel.ConstrCapacityCompOp = '<='
-        AddConstraint(amodel, 'CapacityConstraint', ConstraintCapacityExprRule, '<=', amodel.Arcs)
+        def ConstraintCapacityExprRuleLHS(model, node_s, node_d):
+            return sum(model.FlowStrain[flow] * model.FlowRoute[flow, node_s, node_d] for flow in model.Flows)
+        def ConstraintCapacityExprRuleRHS(model, node_s, node_d):
+            return model.Capacity[node_s, node_d]
+        AddConstraint(amodel, 'CapacityConstraint', ConstraintCapacityExprRuleLHS, 
+                        ConstraintCapacityExprRuleRHS, '<=', amodel.Arcs)
     return NonlinearCapacityConstraintsMaker
 
 
@@ -48,28 +60,37 @@ def LinearCapacityConstraintsGenerator():
 
         amodel.FlowStrainMulRoute = pyo.Var(amodel.Flows, amodel.Arcs, domain = pyo.NonNegativeReals)
 
-        def FlowStrainMulRouteConstraint1ExprRule(model, flow, node_s, node_d):
-            """Help variable is greater or equal to the flow if the route exist. """
+        def FlowStrainMulRouteConstraint1ExprRuleLHS(model, flow, node_s, node_d):
+            """Help variable is greater or equal to the flow if the route exist right hand value. """
             return -model.FlowStrainMulRoute[flow, node_s, node_d] + model.FlowStrain[flow] \
-                    + M_MULT * model.FlowUb * (model.FlowRoute[flow, node_s, node_d] - 1)
-        AddConstraint(amodel, 'FlowStrainMulRouteConstraint1', FlowStrainMulRouteConstraint1ExprRule, '<=', amodel.Flows, amodel.Arcs)
+                    + M_MULT * model.FlowUb * model.FlowRoute[flow, node_s, node_d]
+        def FlowStrainMulRouteConstraint1ExprRuleRHS(model, flow, node_s, node_d):
+            """Help variable is greater or equal to the flow if the route exist left hand value. """
+            return M_MULT * model.FlowUb
+        AddConstraint(amodel, 'FlowStrainMulRouteConstraint1', FlowStrainMulRouteConstraint1ExprRuleLHS,
+                        FlowStrainMulRouteConstraint1ExprRuleRHS, '<=', amodel.Flows, amodel.Arcs)
 
-        def FlowStrainMulRouteConstraint3ExprRule(model, flow, node_s, node_d):
+        def FlowStrainMulRouteConstraint3ExprRuleLHS(model, flow, node_s, node_d):
             """Help variable is less or equal to the flow. """
             return model.FlowStrainMulRoute[flow, node_s, node_d] - model.FlowStrain[flow]
-        AddConstraint(amodel, 'FlowStrainMulRouteConstraint3', FlowStrainMulRouteConstraint3ExprRule, '<=', amodel.Flows, amodel.Arcs)
+        AddConstraint(amodel, 'FlowStrainMulRouteConstraint3', FlowStrainMulRouteConstraint3ExprRuleLHS, 
+                        0, '<=', amodel.Flows, amodel.Arcs)
 
-        def FlowStrainMulRouteConstraint4ExprRule(model, flow, node_s, node_d):
+        def FlowStrainMulRouteConstraint4ExprRuleLHS(model, flow, node_s, node_d):
             """Help variable is less or equal zero if the route doesn't exitst. """
             return model.FlowStrainMulRoute[flow, node_s, node_d] \
                     - M_MULT * model.FlowUb * model.FlowRoute[flow, node_s, node_d]
-        AddConstraint(amodel, 'FlowStrainMulRouteConstraint4', FlowStrainMulRouteConstraint4ExprRule, '<=', amodel.Flows, amodel.Arcs)
+        AddConstraint(amodel, 'FlowStrainMulRouteConstraint4', FlowStrainMulRouteConstraint4ExprRuleLHS, 
+                        0, '<=', amodel.Flows, amodel.Arcs)
 
-        def ConstraintCapacityExprRule(model, node_s, node_d):
-            """Sum of the all flows less or equal to the capacity"""
-            return sum(model.FlowStrainMulRoute[flow, node_s, node_d] for flow in model.Flows) \
-            - model.Capacity[node_s, node_d]
-        AddConstraint(amodel, 'CapacityConstraint', ConstraintCapacityExprRule, '<=', amodel.Arcs)
+        def ConstraintCapacityExprRuleLHS(model, node_s, node_d):
+            """Sum of the all flows less or equal to the capacity left hand value"""
+            return sum(model.FlowStrainMulRoute[flow, node_s, node_d] for flow in model.Flows)
+        def ConstraintCapacityExprRuleRHS(model, node_s, node_d):
+            """Sum of the all flows less or equal to the capacity right hand value"""
+            return model.Capacity[node_s, node_d]
+        AddConstraint(amodel, 'CapacityConstraint', ConstraintCapacityExprRuleLHS, 
+                        ConstraintCapacityExprRuleRHS, '<=', amodel.Arcs)
 
     return LinearCapacityConstraintsMaker
 
@@ -83,24 +104,38 @@ def ReformulatedConstraintsGenerator():
         
         amodel.FlowStrainMulRoute = pyo.Var(amodel.Flows, amodel.Arcs, domain = pyo.NonNegativeReals)
         
-        def ConstraintRouteExprRule(model, flow, node):
-            """In flow is equal to the out flow. """
-            sum_eq = -model.FlowStrain[flow] if node == model.Src[flow] else model.FlowStrain[flow] if node == model.Dst[flow] else 0
+        def ConstraintRouteExprRuleLHS(model, flow, node):
+            """In flow is equal to the out flow left hand value. """            
             return 0 \
             + sum(model.FlowStrainMulRoute[flow, i, node] for i in model.NodesIn[node]) \
-            - sum(model.FlowStrainMulRoute[flow, node, j] for j in model.NodesOut[node]) \
-            - sum_eq
-        AddConstraint(amodel, 'RouteConstraint', ConstraintRouteExprRule, '==', amodel.Flows, amodel.Nodes)
+            - sum(model.FlowStrainMulRoute[flow, node, j] for j in model.NodesOut[node])            
+        def ConstraintRouteExprRuleRHS(model, flow, node):
+            """In flow is equal to the out flow left right value. """
+            sum_eq = -model.FlowStrain[flow] if node == model.Src[flow] else model.FlowStrain[flow] if node == model.Dst[flow] else 0
+            return sum_eq
+        AddConstraint(amodel, 'RouteConstraint', ConstraintRouteExprRuleLHS,
+                        ConstraintRouteExprRuleRHS, '==', amodel.Flows, amodel.Nodes)
 
-        def SingleFlowConstraintRuleExpr(model, flow, node):
+        def SingleFlowConstraintRuleExprLHS(model, flow, node):
             """Only one flow leaves the node. """
-            return sum(model.FlowRoute[flow, node, i] for i in model.NodesOut[node]) - 1
-        AddConstraint(amodel, 'SingleFlowConstraint', SingleFlowConstraintRuleExpr, '<=', amodel.Flows, amodel.Nodes)
+            return sum(model.FlowRoute[flow, node, i] for i in model.NodesOut[node])
+        AddConstraint(amodel, 'SingleFlowConstraint', SingleFlowConstraintRuleExprLHS,
+                        1, '<=', amodel.Flows, amodel.Nodes)
 
-        def FlowStrainMulRouteConstraint2Expr(model, flow, node_s, node_d):
+        def FlowStrainMulRouteConstraint1ExprLHS(model, flow, node_s, node_d):
             """Flow_route help variable must be less than capacity if it flows via this edge. """
             return model.FlowStrainMulRoute[flow, node_s, node_d] \
             - model.Capacity[node_s, node_d] * model.FlowRoute[flow, node_s, node_d]
-        AddConstraint(amodel, 'FlowStrainMulRouteConstraint2', FlowStrainMulRouteConstraint2Expr, '<=', amodel.Flows, amodel.Arcs)
+        AddConstraint(amodel, 'FlowStrainMulRouteConstraint1', FlowStrainMulRouteConstraint1ExprLHS, 
+                        0, '<=', amodel.Flows, amodel.Arcs)
+
+        def ConstraintCapacityExprRuleLHS(model, node_s, node_d):
+            """Sum of the help variables less or equal to the capacity left hand value"""
+            return sum(model.FlowStrainMulRoute[flow, node_s, node_d] for flow in model.Flows)
+        def ConstraintCapacityExprRuleRHS(model, node_s, node_d):
+            """Sum of the help variables less or equal to the capacity right hand value"""
+            return model.Capacity[node_s, node_d]
+        AddConstraint(amodel, 'CapacityConstraint', ConstraintCapacityExprRuleLHS, 
+                        ConstraintCapacityExprRuleRHS, '<=', amodel.Arcs)
 
     return ReformulatedConstraintsMaker
