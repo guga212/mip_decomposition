@@ -95,6 +95,6 @@ class GeneralDecomposer:
         self.cmodel = self.coordinator.RetrieveBest()
 
         ret_val = master_solver.ExtractSolution(self.cmodel)
-        ret_val = { 'Objective dual' : ret_val[0], 'Objective': pyo.value(self.cmodel.Obj),
+        ret_val = { 'ObjectiveDual' : ret_val[0], 'Objective': pyo.value(self.cmodel.Obj),
                     'Strain': ret_val[1], 'Route': ret_val[2], 'Time': self.total_time }
         return ret_val

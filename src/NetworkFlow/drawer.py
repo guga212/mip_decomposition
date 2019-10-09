@@ -12,7 +12,7 @@ def PlotNetwork(network, name):
     fig, axes = plt.subplots(nrow, ncol)
     plt.figure(fig.number)
     fig.suptitle(name)
-    pos = nx.kamada_kawai_layout(network.network_graph)
+    pos = nx.shell_layout(network.network_graph)
     
     #draw graph on the multiple plot
     def DrawGraph(flow_indx, flow_val):

@@ -15,7 +15,7 @@ def RecoverFeasibleStrain(rs_model, routes, solver):
     amodel = cp.deepcopy(rs_model.amodel)
 
     #create basic model
-    rec_amodel = mg.RsModelGenerator(mg.RouteConstraintsGenerator(), mg.NonlinearCapacityConstraintsGenerator()).CreateAbstractModel()
+    rec_amodel = mg.RsModelGenerator(mg.NonlinearCapacityConstraintsGenerator()).CreateAbstractModel()
     
     #update objectve
     obj = amodel.Obj

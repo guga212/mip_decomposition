@@ -88,6 +88,19 @@ class CoordinatorGradient:
         #update iteration
         self.n_iter += 1
 
+        #update gradient
+        gradient = []
+        for names in self.relaxation_names:
+            relaxed_constraint = getattr(cmodel,  names[0])
+            relaxed_set = getattr(cmodel, names[1])
+            relaxed_constraint_expr_lhs = cmodel.Suffix[relaxed_constraint]['LHS']
+            relaxed_constraint_expr_rhs = cmodel.Suffix[relaxed_constraint]['RHS']
+            for indx in relaxed_set:
+                grad_val = pyo.value(relaxed_constraint_expr_lhs(cmodel, *indx) - 
+                                        relaxed_constraint_expr_rhs(cmodel, *indx))
+                gradient.append(grad_val)
+        self.step_rule.PutGradient(gradient)
+
         #update step
         self.step = self.step_rule.GetStep(cmodel)
 
@@ -103,10 +116,10 @@ class CoordinatorGradient:
             for indx in relaxed_set:
                 gradient = pyo.value(relaxed_constraint_expr_lhs(cmodel, *indx) - 
                                         relaxed_constraint_expr_rhs(cmodel, *indx))
-                lm_incr = pyo.value(LagrangianMultipliers[indx]) + self.step * gradient
+                lm_updated = pyo.value(LagrangianMultipliers[indx]) + self.step * gradient
                 if relaxed_constraint_sign == '<=':
-                    lm_incr = max(0, lm_incr)
-                LagrangianMultipliers[indx] += lm_incr
+                    lm_updated = max(0, lm_updated)
+                LagrangianMultipliers[indx] = lm_updated
                 self.lagr_mult_stop[indx_sc].PutValue(pyo.value(LagrangianMultipliers[indx]))
                 indx_sc += 1
 

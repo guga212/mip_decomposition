@@ -169,3 +169,45 @@ class NetworkGraph:
         self.capacity_min = capacity_min
         self.capacity_max = capacity_max
         return self
+    
+    @classmethod
+    def GenerateSmallWorld(cls, worlds_init_data, capacity_min=0, capacity_max=0):
+
+        graph_worlds = [ nx.gnm_random_graph(wd['NodesNumber'], wd['EdgesNumber'], directed=True) for wd in worlds_init_data ]
+        network_graph = nx.disjoint_union_all(graph_worlds)
+
+        self = cls(network_graph)
+
+        self.external_edges = {}
+        def ExternalEdgesGetter():
+            return self.external_edges
+        self.GetExternalEdges = ExternalEdgesGetter 
+
+        self.worlds_nodes = { indx: list(range(wd['NodesNumber'])) for indx, wd in enumerate(worlds_init_data) }
+        for cur_world_indx in self.worlds_nodes:
+            node_offset = sum([ wd['NodesNumber'] for wd_indx, wd in enumerate(worlds_init_data) if wd_indx < cur_world_indx ])
+            self.worlds_nodes[cur_world_indx] = [ node + node_offset for node in self.worlds_nodes[cur_world_indx]]
+        def WorldNodesGetter():
+            return self.worlds_nodes
+        self.GetWorldNodes = WorldNodesGetter
+
+        world_nmb = len(worlds_init_data)
+        worlds_indices = range(0, world_nmb)
+        for cur_world_indx, wd in enumerate(worlds_init_data):
+            src_node_offset = sum([ wd['NodesNumber'] for wd_indx, wd in enumerate(worlds_init_data) if wd_indx < cur_world_indx ])
+            draw_indices = [ indx for indx in worlds_indices if indx != cur_world_indx ]
+            self.external_edges[cur_world_indx] = []
+            for _ in range(wd['ExternalEdgesNumber']):
+                while True:
+                    drawn_world_indx = draw_indices[ nrnd.random_integers( 0, len(draw_indices) - 1 ) ]
+                    dst_node_offset = sum([ wd['NodesNumber'] for wd_indx, wd in enumerate(worlds_init_data) if wd_indx < drawn_world_indx ])
+                    src_node = src_node_offset + nrnd.random_integers( 0, wd['NodesNumber'] - 1 )
+                    dst_node = dst_node_offset + nrnd.random_integers( 0, worlds_init_data[drawn_world_indx]['NodesNumber'] - 1 )
+                    if network_graph.has_edge(src_node, dst_node) == False:
+                        network_graph.add_edge(src_node, dst_node)
+                        self.external_edges[cur_world_indx].append( (src_node, dst_node) )
+                        break
+        nx.set_edge_attributes(network_graph, 1, name='capacity')
+        self.capacity_min = capacity_min
+        self.capacity_max = capacity_max
+        return self
