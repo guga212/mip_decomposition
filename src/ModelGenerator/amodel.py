@@ -29,15 +29,14 @@ class ARoutingStrainModel(pyo.AbstractModel):
 
         self.Capacity = pyo.Param(self.Arcs, within = pyo.NonNegativeReals)
 
-        self.FlowLb =  pyo.Param(within=pyo.NonNegativeIntegers)
-        self.FlowUb =  pyo.Param(within=pyo.NonNegativeIntegers) 
+        self.FlowLb =  pyo.Param(within=pyo.NonNegativeIntegers, mutable = True)
+        self.FlowUb =  pyo.Param(within=pyo.NonNegativeIntegers, mutable = True) 
+        
+        def StrainBoundsRule(model, *args):
+            return ( model.FlowLb, model.FlowUb )
+        self.FlowStrain = pyo.Var(self.Flows, domain = pyo.NonNegativeReals, bounds = StrainBoundsRule )
 
-        self.FlowStrain = pyo.Var(self.Flows, domain = pyo.NonNegativeReals)
         self.FlowRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.Binary)
-
-        def ConstraintBound(model, flow):
-            return (model.FlowLb, model.FlowStrain[flow], model.FlowUb)
-        self.ConstraintBound = pyo.Constraint(self.Flows, rule = ConstraintBound)
 
         self.Suffix = pyo.Suffix(datatype = None)
                         
