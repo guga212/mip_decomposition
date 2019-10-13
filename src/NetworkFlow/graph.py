@@ -178,11 +178,6 @@ class NetworkGraph:
 
         self = cls(network_graph)
 
-        self.external_edges = {}
-        def ExternalEdgesGetter():
-            return self.external_edges
-        self.GetExternalEdges = ExternalEdgesGetter 
-
         self.worlds_nodes = { indx: list(range(wd['NodesNumber'])) for indx, wd in enumerate(worlds_init_data) }
         for cur_world_indx in self.worlds_nodes:
             node_offset = sum([ wd['NodesNumber'] for wd_indx, wd in enumerate(worlds_init_data) if wd_indx < cur_world_indx ])
@@ -196,7 +191,6 @@ class NetworkGraph:
         for cur_world_indx, wd in enumerate(worlds_init_data):
             src_node_offset = sum([ wd['NodesNumber'] for wd_indx, wd in enumerate(worlds_init_data) if wd_indx < cur_world_indx ])
             draw_indices = [ indx for indx in worlds_indices if indx != cur_world_indx ]
-            self.external_edges[cur_world_indx] = []
             for _ in range(wd['ExternalEdgesNumber']):
                 while True:
                     drawn_world_indx = draw_indices[ nrnd.random_integers( 0, len(draw_indices) - 1 ) ]
@@ -205,9 +199,8 @@ class NetworkGraph:
                     dst_node = dst_node_offset + nrnd.random_integers( 0, worlds_init_data[drawn_world_indx]['NodesNumber'] - 1 )
                     if network_graph.has_edge(src_node, dst_node) == False:
                         network_graph.add_edge(src_node, dst_node)
-                        self.external_edges[cur_world_indx].append( (src_node, dst_node) )
                         break
-        nx.set_edge_attributes(network_graph, 1, name='capacity')
+        nx.set_edge_attributes(network_graph, {edge: np.around((capacity_max - capacity_min)*nrnd.ranf()+capacity_min, 3) for edge in nx.edges(network_graph)}, name='capacity')
         self.capacity_min = capacity_min
         self.capacity_max = capacity_max
         return self

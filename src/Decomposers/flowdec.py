@@ -5,7 +5,7 @@ from .relax import RelaxConstraints
 from .gendec import GeneralDecomposer
 
 class FlowDecomposer(GeneralDecomposer):
-    def __init__(self, rs_model, coordinator, binding_constraint_name = 'CapacityConstraint'):
+    def __init__(self, rs_model, coordinator, binding_constraint_name):
         """
         Specialization of the general decomposer.
         Relaxes capacity constraints. Decomposes
@@ -13,7 +13,12 @@ class FlowDecomposer(GeneralDecomposer):
         """
 
         relaxed_constraint_name = binding_constraint_name
-        relaxed_constraint_range = [ arc for arc in  rs_model.init_data[None]['Arcs'][None] ]        
+        def RelaxedSetInitializeGenerator():
+            def RelaxedSetInitialize(model):
+                ret_val = [arc for arc in  model.Arcs]
+                return ret_val
+            return RelaxedSetInitialize
+
         decompose_group_init_data = []
         for flow in rs_model.init_data[None]['Flows'][None]:
             init_data_local = cp.deepcopy(rs_model.init_data)
@@ -21,4 +26,4 @@ class FlowDecomposer(GeneralDecomposer):
             init_data_local[None]['Src'] = { k: v for k, v in init_data_local[None]['Src'].items() if k == flow}
             init_data_local[None]['Dst'] = { k: v for k, v in init_data_local[None]['Dst'].items() if k == flow}
             decompose_group_init_data.append(init_data_local)
-        super().__init__(rs_model, [(relaxed_constraint_name, relaxed_constraint_range)], decompose_group_init_data, coordinator)
+        super().__init__(rs_model, [(relaxed_constraint_name, RelaxedSetInitializeGenerator())], decompose_group_init_data, coordinator)
