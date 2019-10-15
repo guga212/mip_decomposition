@@ -5,8 +5,8 @@ import ModelProcessors as mp
 
 #random network
 net.NetworkGraph.SetRandomSeed(228)
-network = net.NetworkGraph.GenerateRandom(8, 18, 0, 2)
-network.GenerateRandomSrcDst(3)
+network = net.NetworkGraph.GenerateRandom(10, 38, 0, 2)
+network.GenerateRandomSrcDst(6)
 
 #get network params
 n_list = network.GetNodeList()

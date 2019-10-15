@@ -21,8 +21,8 @@ class GeneralDecomposer:
             relaxed_constraint_name = relaxed_constraint_data[0]
             relaxed_constraint = getattr(self.amodel_local, relaxed_constraint_name)
             relaxed_constraint_set_name = relaxed_constraint_name + 'RelaxedSet'
-            relaxed_constraint_init = relaxed_constraint_data[1]
-            relaxed_constraint_set = pyo.Set(dimen = relaxed_constraint.dim(), initialize = relaxed_constraint_init)
+            relaxed_constraint_range = relaxed_constraint_data[1]
+            relaxed_constraint_set = pyo.Set(dimen = relaxed_constraint.dim(), initialize = relaxed_constraint_range)
             setattr(self.amodel_local, relaxed_constraint_set_name, relaxed_constraint_set)
             relaxed_constraints_names.append( (relaxed_constraint_name, relaxed_constraint_set_name) )
         RelaxConstraints(self.amodel_local, relaxed_constraints_names)

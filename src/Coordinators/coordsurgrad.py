@@ -24,7 +24,7 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
     def GenerateSolvingPolicy(self):
         solving_policy_surrogate = super().GenerateSolvingPolicy()
         def SolvingPolicy(solve, cmodels_local):
-            #for every relaxed constrain
+            #for every relaxed constraint
             for relaxed_constraint_name in self.relaxed_constraints_violations:
                 restored_constraint_names = self.restored_names[relaxed_constraint_name]
                 violations_data = self.relaxed_constraints_violations[relaxed_constraint_name]
@@ -45,7 +45,8 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
                             #restored constraint
                             expr = relaxed_constraint_compare_operation_local(relaxed_constraint_expr_local_lhs(cml, *indx) + 
                                                                                 violation['Value'] - value_lhs_local, 0)
-                            restored_constraint_list_local.add(expr)
+                            if (expr is not False) and (expr is not True):
+                                restored_constraint_list_local.add(expr)
             return solving_policy_surrogate(solve, cmodels_local)
 
         self.solving_policy = SolvingPolicy
@@ -61,11 +62,12 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
 
     def UpdateIterationData(self, cmodel):
         super().UpdateIterationData(cmodel)
-
+        self.iteration_cmodel = cmodel
         self.relaxed_constraints_violations = {}
-        self.violations_nmb = 0
+        self.violations_nmb = {}
         #for every relaxed constraint
         for names in self.relaxation_names:
+            self.violations_nmb[names[0]] = 0
             self.relaxed_constraints_violations[names[0]] = {}
             #get constraints and expresssions
             relaxed_constraint = getattr(cmodel,  names[0])
@@ -81,7 +83,7 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
                     self.relaxed_constraints_violations[names[0]][indx] = { 'Violated': False, 'Value': value}
                 else:
                     self.relaxed_constraints_violations[names[0]][indx] = { 'Violated': True, 'Value': 0}
-                    self.violations_nmb += 1
+                    self.violations_nmb[names[0]] += 1
         #save as best if the solution is feasible
         if self.violations_nmb == 0:
             self.SetBestSolution(cmodel)
@@ -89,6 +91,7 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
     def CheckExit(self):
         obj_stop = self.obj_stop_crit.CheckStop()
         lm_stop = sum([int(sc.CheckStop()) for sc in self.lagr_mult_stop]) == len(self.lagr_mult_stop)
-        feasible = (self.violations_nmb == 0)
-        if obj_stop or lm_stop or feasible:
+        feasible = any([ nmb  == 0 for name, nmb in self.violations_nmb.items() ])
+        if feasible:
+            self.SetBestSolution(self.iteration_cmodel)
             return True

@@ -1,6 +1,8 @@
 import copy as cp
 import pyomo.environ as pyo
 import ModelGenerator as mg
+from .subnetconstr import sm_constraint_rules_lhs, sm_constraint_rules_rhs
+from .subnetobj import ObjectiveLin, ObjectiveQuad
 from .relax import RelaxConstraints
 from .gendec import GeneralDecomposer
 
@@ -50,6 +52,12 @@ class ASubNetRoutingStrainModel(mg.ARoutingStrainModel):
             return ret_value
         self.DuplicatedArcs = pyo.Set(dimen = 4, initialize = InitDuplicateddArcs)
 
+        def InitOriginalArcs(model):
+            duplicated_arcs = [ (indx[1], indx[2], indx[3]) for indx in model.DuplicatedArcs ]
+            original_arcs = [ arc for arc in model.Arcs if arc not in duplicated_arcs ]
+            return original_arcs
+        self.OriginalArcs = pyo.Set(dimen = 3, initialize = InitOriginalArcs)                
+
         def NodesOut_init(model, node_subnet, node):
             retval = []
             for (i,j) in model.SubnetsArcs[node_subnet]:
@@ -78,96 +86,12 @@ class ASubNetRoutingStrainModel(mg.ARoutingStrainModel):
     def InitializeVariables(self):
         self.FlowStrain = pyo.Var(self.Flows, self.Subnets, domain = pyo.NonNegativeReals, bounds = self.StrainBoundsRule )
         self.FlowRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.Binary)
+    
     def __init__(self):
         super().__init__()
+        self.name = 'SubnetRoutingStrainAbstractModel'
 
-#changed constraints container
-sm_constraint_rules_lhs = {}
-sm_constraint_rules_rhs = {}
-M_MULT = 1.1
-
-#subnets route constraint
-def ConstraintRouteExprRuleLHS(model, flow, subnet, node):
-    return 0 \
-    + sum(model.FlowRoute[flow, subnet, i, node] for i in model.NodesIn[subnet, node]) \
-    - sum(model.FlowRoute[flow, subnet, node, j] for j in model.NodesOut[subnet, node])
-def ConstraintRouteExprRuleRHS(model, flow, subnet, node):
-    sum_eq = -1 if node == model.Src[flow] else 1 if node == model.Dst[flow] else 0
-    return sum_eq
-sm_constraint_rules_lhs['RouteConstraint'] = ConstraintRouteExprRuleLHS
-sm_constraint_rules_rhs['RouteConstraint'] = ConstraintRouteExprRuleLHS
-
-#subnets nonlinear capacity constraint
-def ConstraintCapacityExprRuleLHS(model, subnet, node_s, node_d):
-    return sum(model.FlowStrain[flow, subnet] * model.FlowRoute[flow, subnet, node_s, node_d] for flow in model.Flows)
-def ConstraintCapacityExprRuleRHS(model, subnet, node_s, node_d):
-    return model.Capacity[node_s, node_d]
-sm_constraint_rules_lhs['CapacityConstraint'] = ConstraintCapacityExprRuleLHS
-sm_constraint_rules_rhs['CapacityConstraint'] = ConstraintCapacityExprRuleRHS    
-
-
-#subnets help variable definition constraint 1
-def FlowStrainMulRouteConstraint1ExprRuleLHS(model, flow, subnet, node_s, node_d):
-    return -model.FlowStrainMulRoute[flow, subnet, node_s, node_d] + model.FlowStrain[flow, subnet] \
-            + M_MULT * model.FlowUb * model.FlowRoute[flow, subnet, node_s, node_d]
-def FlowStrainMulRouteConstraint1ExprRuleRHS(model, flow, subnet, node_s, node_d):
-    return M_MULT * model.FlowUb
-sm_constraint_rules_lhs['FlowStrainMulRouteConstraint1'] = FlowStrainMulRouteConstraint1ExprRuleLHS
-sm_constraint_rules_rhs['FlowStrainMulRouteConstraint1'] = FlowStrainMulRouteConstraint1ExprRuleRHS
-
-#subnets help variable definition constraint 3
-def FlowStrainMulRouteConstraint3ExprRuleLHS(model, flow, subnet, node_s, node_d):
-    return model.FlowStrainMulRoute[flow, subnet, node_s, node_d] - model.FlowStrain[flow, subnet]
-sm_constraint_rules_lhs['FlowStrainMulRouteConstraint3'] = FlowStrainMulRouteConstraint3ExprRuleLHS
-sm_constraint_rules_rhs['FlowStrainMulRouteConstraint3'] = 0
-
-#subnets help variable definition constraint 4
-def FlowStrainMulRouteConstraint4ExprRuleLHS(model, flow, subnet, node_s, node_d):
-    return model.FlowStrainMulRoute[flow, subnet, node_s, node_d] \
-            - M_MULT * model.FlowUb * model.FlowRoute[flow, subnet, node_s, node_d]
-sm_constraint_rules_lhs['FlowStrainMulRouteConstraint4'] = FlowStrainMulRouteConstraint4ExprRuleLHS
-sm_constraint_rules_rhs['FlowStrainMulRouteConstraint4'] = 0
-
-#subnets linear capacity constraint
-def ConstraintCapacityLinearExprRuleLHS(model, subnet, node_s, node_d):
-    return sum(model.FlowStrainMulRoute[flow, subnet, node_s, node_d] for flow in model.Flows )
-def ConstraintCapacityLinearExprRuleRHS(model, subnet, node_s, node_d):
-    return model.Capacity[node_s, node_d]
-sm_constraint_rules_lhs['CapacityConstraintLinear'] = ConstraintCapacityLinearExprRuleLHS
-sm_constraint_rules_rhs['CapacityConstraintLinear'] = ConstraintCapacityLinearExprRuleRHS    
-
-#subnets continious variables route constraint (reformulated model)
-def ConstraintRouteContiniousExprRuleLHS(model, flow, subnet, node):
-    return 0 \
-    + sum(model.FlowStrainMulRoute[flow, subnet, i, node] for i in model.NodesIn[subnet, node]) \
-    - sum(model.FlowStrainMulRoute[flow, subnet, node, j] for j in model.NodesOut[subnet, node])            
-def ConstraintRouteContiniousExprRuleRHS(model, flow, subnet, node):
-    sum_eq = -model.FlowStrain[flow, subnet] if node == model.Src[flow] else model.FlowStrain[flow, subnet] if node == model.Dst[flow] else 0
-    return sum_eq
-sm_constraint_rules_lhs['RouteConstraintContiniousRef'] = ConstraintRouteContiniousExprRuleLHS
-sm_constraint_rules_rhs['RouteConstraintContiniousRef'] = ConstraintRouteContiniousExprRuleRHS
-
-#subnets single flow constraint (reformulated model)
-def SingleFlowConstraintRuleExprLHS(model, flow, subnet, node):
-    return sum(model.FlowRoute[flow, subnet, node, i] for i in model.NodesOut[subnet, node])
-sm_constraint_rules_lhs['SingleFlowConstraintRef'] = SingleFlowConstraintRuleExprLHS
-sm_constraint_rules_rhs['SingleFlowConstraintRef'] = 1
-
-#subnets help variable definition constraint (reformulated model)
-def FlowStrainMulRouteConstraint1RefExprRuleLHS(model, flow, subnet, node_s, node_d):
-    return model.FlowStrainMulRoute[flow, subnet, node_s, node_d] \
-    - model.Capacity[node_s, node_d] * model.FlowRoute[flow, subnet, node_s, node_d]
-sm_constraint_rules_lhs['FlowStrainMulRouteConstraint1Ref'] = FlowStrainMulRouteConstraint1RefExprRuleLHS
-sm_constraint_rules_rhs['FlowStrainMulRouteConstraint1Ref'] = 0
-
-#subnets linera cpacity constraint (reformulated model)
-def ConstraintCapacityRefExprRuleLHS(model, subnet, node_s, node_d):
-    return sum(model.FlowStrainMulRoute[flow, subnet, node_s, node_d] for flow in model.Flows )
-def ConstraintCapacityRefExprRuleRHS(model, subnet, node_s, node_d):
-    return model.Capacity[node_s, node_d]
-sm_constraint_rules_lhs['CapacityConstraintRef'] = ConstraintCapacityRefExprRuleLHS
-sm_constraint_rules_rhs['CapacityConstraintRef'] = ConstraintCapacityRefExprRuleRHS    
-
+  
 
 class SubnetsDecomposer(GeneralDecomposer):
     def __init__(self, rs_model, coordinator, subnets_nodes):
@@ -186,9 +110,20 @@ class SubnetsDecomposer(GeneralDecomposer):
         amodel_sm = ASubNetRoutingStrainModel()
 
         #add objective from the original model
+        amodel_sm.FlowStrainWeight = pyo.Param(mutable = True, default = amodel_working.FlowStrainWeight.default() / len(subnets_nodes))
+        amodel_sm.FlowRouteWeight = pyo.Param(mutable = True, default = amodel_working.FlowRouteWeight.default())
         obj_ref_tmp = amodel_working.Obj
-        amodel_working.del_component(amodel_working.Obj)
-        amodel_sm.Obj = obj_ref_tmp
+        objective_name = amodel_working.Suffix[amodel_working.Obj]
+        if objective_name == 'Linear':
+            amodel_working.del_component(amodel_working.Obj)
+            amodel_sm.Obj = obj_ref_tmp
+            amodel_sm.Obj.rule = ObjectiveLin
+            amodel_sm.Suffix[amodel_sm.Obj] = 'Linear'
+        if objective_name == 'Quadratic':
+            amodel_working.del_component(amodel_working.Obj)
+            amodel_sm.Obj = obj_ref_tmp
+            amodel_sm.Obj.rule = ObjectiveQuad
+            amodel_sm.Suffix[amodel_sm.Obj] = 'Quadratic'
 
         #add help varaible if presented in original model
         if hasattr(amodel_working, 'FlowStrainMulRoute') == True:
@@ -204,19 +139,41 @@ class SubnetsDecomposer(GeneralDecomposer):
                                         rhs, cname, *sets_names)
 
         #equality constraints for the replicated flows
-        def ConstraintFlowStrainEqLhsRule(model, flow, subnet):
-            subnet_tab = [subnet for subnet in model.Subnets]
-            cur_indx = subnet_tab.index(subnet)
-            next_indx = (cur_indx + 1) % len(subnet_tab)
-            return model.FlowStrain[flow, subnet_tab[cur_indx]] \
-                    - model.FlowStrain[flow, subnet_tab[next_indx]]
-        mg.constrmk.AddConstraint(amodel_sm, "FlowStrainEqConstraint", ConstraintFlowStrainEqLhsRule, 
+        def ConstraintFlowStrainEqLhsRuleGenerator(subnet_tab):
+
+            def ConstraintFlowStrainEqLhsRule(model, flow, subnet):
+                cur_indx = subnet_tab.index(subnet)
+                next_indx = (cur_indx + 1) % len(subnet_tab)
+                indx_1 = (flow, subnet_tab[cur_indx])
+                if indx_1 in model.FlowStrain.index_set():
+                    strain_1 = model.FlowStrain[indx_1]
+                else:
+                    strain_1 = 0
+                indx_2 = (flow, subnet_tab[next_indx])
+                if indx_2 in model.FlowStrain.index_set():
+                    strain_2 = model.FlowStrain[indx_2]
+                else:
+                    strain_2 = 0
+                return strain_1 - strain_2
+
+            return ConstraintFlowStrainEqLhsRule
+        subnet_tab = [ subnet for subnet in subnets_nodes ]
+        mg.constrmk.AddConstraint(amodel_sm, "FlowStrainEqConstraint", ConstraintFlowStrainEqLhsRuleGenerator(subnet_tab), 
                                     0, '==', 'Flows', 'Subnets')
 
         #equality constraints for the duplicated routes
         def ConstraintInterRouteEqLhsRule(model, flow, subnet_1, subnet_2, node_s, node_d):
-            return model.FlowRoute[flow, subnet_1, node_s, node_d] \
-                    - model.FlowRoute[flow, subnet_2, node_s, node_d]
+            indx_1 = flow, subnet_1, node_s, node_d
+            if indx_1 in model.FlowRoute.index_set():
+                route_1 = model.FlowRoute[indx_1]
+            else:
+                route_1 = 0
+            indx_2 = flow, subnet_2, node_s, node_d
+            if indx_2 in model.FlowRoute.index_set():
+                route_2 = model.FlowRoute[indx_2]
+            else:
+                route_2 = 0
+            return route_1 - route_2            
         mg.constrmk.AddConstraint(amodel_sm, "InterRouteEqConstraint", ConstraintInterRouteEqLhsRule,
                                     0, '==', 'Flows', 'DuplicatedArcs')
 
@@ -245,23 +202,11 @@ class SubnetsDecomposer(GeneralDecomposer):
 
         #create relaxation require data
         relaxed_constraint_name_1 = "FlowStrainEqConstraint"
-        def RelaxedSet1InitializeGenerator():
-            def RelaxedSetInitialize(model):
-                ret_val = [ (flow, subnet) for flow in model.Flows for subnet in model.Subnets]
-                return ret_val
-            return RelaxedSetInitialize
-        # relaxed_constraint_range_1 = [ (flow, subnet) for flow in rs_model_sm.init_data[None]['Flows'][None] 
-        #                                 for subnet in rs_model_sm.init_data[None]['Subnets'][None] ]
+        relaxed_constraint_range_1 = [ (flow, subnet) for flow in cmodel_sm.Flows for subnet in cmodel_sm.Subnets]
         relaxed_constraint_name_2 = "InterRouteEqConstraint"
-        def RelaxedSet2InitializeGenerator():
-            def RelaxedSetInitialize(model):
-                ret_val = [ (flow, *arc) for flow in model.Flows for arc in model.DuplicatedArcs]
-                return ret_val
-            return RelaxedSetInitialize
-        # relaxed_constraint_range_2 = [ (flow, *arc) for flow in rs_model_sm.init_data[None]['Flows'][None] 
-        #                                 for arc in rs_model_sm.cmodel.DuplicatedArcs]
-        relaxed_data = [ (relaxed_constraint_name_1, RelaxedSet1InitializeGenerator()), 
-                        (relaxed_constraint_name_2, RelaxedSet2InitializeGenerator()) ] 
+        relaxed_constraint_range_2 = [ (flow, *arc) for flow in cmodel_sm.Flows for arc in cmodel_sm.DuplicatedArcs]
+        relaxed_data = [ (relaxed_constraint_name_1, relaxed_constraint_range_1), 
+                (relaxed_constraint_name_2, relaxed_constraint_range_2) ]
 
         #create decomposition required data
         decompose_group_init_data = []
@@ -276,10 +221,3 @@ class SubnetsDecomposer(GeneralDecomposer):
                                                     }
             decompose_group_init_data.append(init_data_local)
         super().__init__(rs_model_sm, relaxed_data, decompose_group_init_data, coordinator)
-
-        # import SolverManager as sm
-        # glpk_solver = sm.milpsolvers.GlpkSolver()
-        # res = glpk_solver.Solve(cmodel_sm)
-
-        debug_val = 1
-        

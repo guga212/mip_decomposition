@@ -18,6 +18,8 @@ def RecoverFeasibleStrain(rs_model, routes, solver):
     rec_amodel = mg.RsModelGenerator(mg.NonlinearCapacityConstraintsGenerator()).CreateAbstractModel()
     
     #update objectve
+    rec_amodel.FlowStrainWeight = pyo.Param(mutable = True, default = amodel.FlowStrainWeight.default())
+    rec_amodel.FlowRouteWeight = pyo.Param(mutable = True, default = amodel.FlowRouteWeight.default())
     obj = amodel.Obj
     amodel.del_component(obj)
     rec_amodel.Obj = obj
