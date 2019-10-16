@@ -79,19 +79,21 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
             for indx in relaxed_set:
                 value = pyo.value(relaxed_constraint_expr_lhs(cmodel, *indx) 
                                     - relaxed_constraint_expr_rhs(cmodel, *indx))
-                if relaxed_constraint_compare_operation(value, 0) == True:
+                acceptable_error = 1e-6
+                if relaxed_constraint_compare_operation(value, 0) == True or relaxed_constraint_compare_operation(value - acceptable_error, 0) == True:
                     self.relaxed_constraints_violations[names[0]][indx] = { 'Violated': False, 'Value': value}
                 else:
                     self.relaxed_constraints_violations[names[0]][indx] = { 'Violated': True, 'Value': 0}
                     self.violations_nmb[names[0]] += 1
         #save as best if the solution is feasible
-        if self.violations_nmb == 0:
+        if all([ nmb  == 0 for name, nmb in self.violations_nmb.items() ]):
             self.SetBestSolution(cmodel)
 
     def CheckExit(self):
         obj_stop = self.obj_stop_crit.CheckStop()
         lm_stop = sum([int(sc.CheckStop()) for sc in self.lagr_mult_stop]) == len(self.lagr_mult_stop)
         feasible = any([ nmb  == 0 for name, nmb in self.violations_nmb.items() ])
-        if feasible:
-            self.SetBestSolution(self.iteration_cmodel)
+        if lm_stop or feasible:
+            if feasible and ~lm_stop:
+                self.SetBestSolution(self.iteration_cmodel)
             return True

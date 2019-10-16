@@ -39,8 +39,8 @@ soultion_alt= opt_cplex.Solve(rsm_model_alt.cmodel)
 objective_alt, strains_alt, routes_alt = ( soultion_alt['Objective'], soultion_alt['Strain'], soultion_alt['Route'] )
 
 #validate constraints violations
-viol = mp.FindConstraintsViolation(rsm_model.cmodel)
-viol_alt = mp.FindConstraintsViolation(rsm_model_alt.cmodel)
+viol = mp.FindConstraintsViolation(rsm_model.cmodel, strains, routes)
+viol_alt = mp.FindConstraintsViolation(rsm_model.cmodel, strains_alt, routes_alt)
 
 #compare solutions
 eq1 = (objective == objective_alt)

@@ -31,7 +31,7 @@ rs_model_dec = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict,
 #subnet decomposition init
 # subnet_dec = dec.SubnetsDecomposer(rs_model_dec, cr.CoordinatorGradient(step_rule=cr.gradstep.DiminishingFractionRule(0.1, 20)),
 #                                     network.GetWorldNodes())
-subnet_dec = dec.SubnetsDecomposer(rs_model_dec, cr.CoordinatorFsaGradient(step_rule=cr.gradstep.DiminishingFractionRule(0.1, 20)),
+subnet_dec = dec.SubnetsDecomposer(rs_model_dec, cr.CoordinatorFsaGradient(step_rule=cr.gradstep.DiminishingFractionRule(0.8, 20)),
                                     network.GetWorldNodes())
 
 #initialize solvers
@@ -46,10 +46,25 @@ objective_orig, strains_orig, routes_orig, time_orig = ( solution_orig['Objectiv
 solution_dec = subnet_dec.Solve( opt_solver, [opt_solver for _ in network.GetWorldNodes()] )
 objective_dec, objective_dual_dec, strains_dec, routes_dec, time_dec = ( solution_dec['Objective'], solution_dec['ObjectiveDual'], 
                                                                         solution_dec['Strain'], solution_dec['Route'], solution_dec['Time'] )
+strains_dec_ref = [ max([flow_subnet for flow_subnet in strains_dec[flow_key]]) for flow_key in strains_dec ]
+routes_dec_ref = []
+for route in routes_dec:
+    route_dec_ref = {}
+    for indx in route:
+        if (indx[1], indx[2]) in route_dec_ref:
+            route_dec_ref[(indx[1], indx[2])] = max([route_dec_ref[(indx[1], indx[2])], route[indx]])
+        else:
+            route_dec_ref[(indx[1], indx[2])] = route[indx]
+    routes_dec_ref.append(route_dec_ref)
+
+#recover feasible strain
+soultion_rec = mp.RecoverFeasibleStrain(rs_model, routes_dec_ref, opt_solver)
+objective_rec, strains_rec, routes_rec, rec_cmodel = ( soultion_rec['Objective'], soultion_rec['Strain'], soultion_rec['Route'], soultion_rec['Cmodel'])
 
 #validate constraints violations
-viol = mp.FindConstraintsViolation(rs_model.cmodel)
-#viol_dec = mp.FindConstraintsViolation(subnet_dec.cmodel)
+viol = mp.FindConstraintsViolation(rs_model.cmodel, strains_orig, routes_orig)
+viol_dec = mp.FindConstraintsViolation(rs_model.cmodel, strains_dec_ref, routes_dec_ref)
+viol_rec = mp.FindConstraintsViolation(rs_model.cmodel, strains_rec, routes_rec)
 
 #print results
 print('')
@@ -57,6 +72,8 @@ print('###################!RESULTS!#############################')
 print(f'Original:\nObjective: {objective_orig}, Time: {time_orig}')
 print('__________________________________________________________')
 print(f'Decomposition:\nObjective: {objective_dec}, ObjectiveDual: {objective_dual_dec}, Time: {time_dec}')
+print('__________________________________________________________')
+print(f'Recovery:\nObjective: {objective_rec}')
 print('__________________________________________________________')
 print('#####################!END!###############################')
 print('')

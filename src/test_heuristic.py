@@ -34,8 +34,8 @@ objective_heur, strains_heur, routes_heur = ( solution_heur['Objective'], soluti
 
 
 #validate constraints violations
-viol = mp.FindConstraintsViolation(rsm_model.cmodel)
-viol_heur = mp.FindConstraintsViolation(rsm_model_heur.cmodel)
+viol = mp.FindConstraintsViolation(rsm_model.cmodel, strains, routes)
+viol_heur = mp.FindConstraintsViolation(rsm_model.cmodel, strains_heur, routes_heur)
 
 
 #put solution of the problem into the network graph

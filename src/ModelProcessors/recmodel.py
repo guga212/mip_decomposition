@@ -1,4 +1,5 @@
 import ModelGenerator as mg
+from ModelGenerator.objmk import LinearObjectiveGenerator, QuadObjectiveGenerator
 import pyomo.environ as pyo
 import copy as cp
 
@@ -17,6 +18,14 @@ def RecoverFeasibleStrain(rs_model, routes, solver):
     #create basic model
     rec_amodel = mg.RsModelGenerator(mg.NonlinearCapacityConstraintsGenerator()).CreateAbstractModel()
     
+    #add objective from the original model
+    objective_name = amodel.Suffix[amodel.Obj]
+    if objective_name == 'Linear':
+        obj_maker = LinearObjectiveGenerator()
+    if objective_name == 'Quadratic':
+        obj_maker = QuadObjectiveGenerator()
+    obj_maker(rec_amodel)
+        
     #update objectve
     rec_amodel.FlowStrainWeight = pyo.Param(mutable = True, default = amodel.FlowStrainWeight.default())
     rec_amodel.FlowRouteWeight = pyo.Param(mutable = True, default = amodel.FlowRouteWeight.default())
