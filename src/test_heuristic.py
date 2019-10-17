@@ -16,31 +16,46 @@ a_list = network.GetArcList()
 c_dict = network.GetCapacityParam()
 
 #create model generator
-nmg = mg.RsModelGenerator(mg.LinearObjectiveGenerator(), mg.RouteConstraintsGenerator(), mg.LinearCapacityConstraintsGenerator())
+nmg = mg.RsModelGenerator(mg.QuadObjectiveGenerator(), mg.RouteConstraintsGenerator(), mg.LinearCapacityConstraintsGenerator())
 
 #create model from the generator
-rsm_model = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
-rsm_model_heur = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
+rs_model = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
+rs_model_heur = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
 
 #initialize solvers
 opt_heur = sm.HeuristicSolver()
-opt = sm.milpsolvers.GlpkSolver()
+opt = sm.miqppsolver.CplexSolver()
 
 #solve
-solution = opt.Solve(rsm_model.cmodel)
-objective, strains, routes = ( solution['Objective'], solution['Strain'], solution['Route'] )
-solution_heur = opt_heur.Solve(rsm_model_heur.cmodel)
-objective_heur, strains_heur, routes_heur = ( solution_heur['Objective'], solution_heur['Strain'], solution_heur['Route'] )
+solution_orig = opt.Solve(rs_model.cmodel)
+objective_orig, strains_orig, routes_orig, time_orig = ( solution_orig['Objective'], solution_orig['Strain'], solution_orig['Route'], solution_orig['Time'] )
+solution_heur = opt_heur.Solve(rs_model_heur.cmodel)
+objective_heur, strains_heur, routes_heur, time_heur = ( solution_heur['Objective'], solution_heur['Strain'], solution_heur['Route'], solution_heur['Time'] )
 
+#recover feasible for given routes
+soultion_rec = mp.RecoverFeasibleStrain(rs_model, routes_heur, opt)
+objective_rec, strains_rec, routes_rec, rec_cmodel = ( soultion_rec['Objective'], soultion_rec['Strain'], soultion_rec['Route'], soultion_rec['Cmodel'])
 
 #validate constraints violations
-viol = mp.FindConstraintsViolation(rsm_model.cmodel, strains, routes)
-viol_heur = mp.FindConstraintsViolation(rsm_model.cmodel, strains_heur, routes_heur)
+viol = mp.FindConstraintsViolation(rs_model.cmodel, strains_orig, routes_orig)
+viol_heur = mp.FindConstraintsViolation(rs_model.cmodel, strains_heur, routes_heur)
+
+#print results
+print('')
+print('###################!RESULTS!#############################')
+print(f'Original:\nObjective: {objective_orig}, Time: {time_orig}')
+print('__________________________________________________________')
+print(f'Heuristic:\nObjective: {objective_heur}, Time: {time_heur}')
+print('__________________________________________________________')
+print(f'Recovery:\nObjective: {objective_rec}')
+print('__________________________________________________________')
+print('#####################!END!###############################')
+print('')
 
 
 #put solution of the problem into the network graph
-path_list_sol =  [ [edge for edge, value in route.items() if value == 1] for route in routes ]
-flow_list_sol = strains
+path_list_sol =  [ [edge for edge, value in route.items() if value == 1] for route in routes_orig ]
+flow_list_sol = strains_orig
 network.SetPath(*path_list_sol)
 network.SetFlows(*flow_list_sol)
 net.PlotNetwork(network, 'Classic solver')

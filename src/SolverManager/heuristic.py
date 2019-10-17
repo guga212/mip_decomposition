@@ -2,6 +2,7 @@ from .isolver import ISolver
 import pyomo.environ as pyo
 import heapq
 import copy
+import time
 
 class HeuristicSolver:
 
@@ -50,6 +51,9 @@ class HeuristicSolver:
 
         path_flow = {}
 
+        #start of the algorithm
+        start_time = time.process_time()
+
         for flow in cmodel_inst.Flows:
 
             src = cmodel_inst.Src[flow]
@@ -93,6 +97,10 @@ class HeuristicSolver:
             #save path to the destination
             path_flow[flow] = distances[dst]
 
+        #end of the algorithm
+        end_time = time.process_time()
+        elapsed_time = end_time - start_time
+
         #put found pathes into the original model
         for route in cmodel.FlowRoute:
             if (route[1], route[2]) in path_flow[route[0]].components[1]:
@@ -105,7 +113,7 @@ class HeuristicSolver:
         obj_val, strain_val, route_val = ISolver.ExtractSolution(cmodel)
 
         #create standard solver output
-        solution = { 'Objective': obj_val, 'Strain': strain_val, 'Route': route_val, 'Time': 0.0 }
+        solution = { 'Objective': obj_val, 'Strain': strain_val, 'Route': route_val, 'Time': elapsed_time }
 
         
         return solution

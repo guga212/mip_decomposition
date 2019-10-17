@@ -26,13 +26,6 @@ def RecoverFeasibleStrain(rs_model, routes, solver):
         obj_maker = QuadObjectiveGenerator()
     obj_maker(rec_amodel)
         
-    #update objectve
-    rec_amodel.FlowStrainWeight = pyo.Param(mutable = True, default = amodel.FlowStrainWeight.default())
-    rec_amodel.FlowRouteWeight = pyo.Param(mutable = True, default = amodel.FlowRouteWeight.default())
-    obj = amodel.Obj
-    amodel.del_component(obj)
-    rec_amodel.Obj = obj
-
     #create concrete instance
     rec_cmodel = rec_amodel.create_instance(data = rs_model.init_data)
     
