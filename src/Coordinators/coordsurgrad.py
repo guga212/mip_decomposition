@@ -19,6 +19,7 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
 
     def __init__(self, step_rule = IStepRule()):
         super().__init__(step_rule)
+        self.cmodel_partially_feasible = None
         self.restored_names = {}
 
     def GenerateSolvingPolicy(self):
@@ -61,8 +62,7 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
             setattr(amodel_local, restored_constraint_list_name, resored_constraint_list)
 
     def UpdateIterationData(self, cmodel):
-        super().UpdateIterationData(cmodel)
-        self.iteration_cmodel = cmodel
+        super().UpdateIterationData(cmodel)        
         self.relaxed_constraints_violations = {}
         self.violations_nmb = {}
         #for every relaxed constraint
@@ -85,15 +85,15 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
                 else:
                     self.relaxed_constraints_violations[names[0]][indx] = { 'Violated': True, 'Value': 0}
                     self.violations_nmb[names[0]] += 1
-        #save as best if the solution is feasible
-        if all([ nmb  == 0 for name, nmb in self.violations_nmb.items() ]):
-            self.SetBestSolution(cmodel)
+        #save as if the solution is partially feasible
+        if any([ nmb  == 0 for name, nmb in self.violations_nmb.items() ]):
+            self.cmodel_partially_feasible = cp.deepcopy(cmodel)
 
     def CheckExit(self):
         obj_stop = self.obj_stop_crit.CheckStop()
         lm_stop = sum([int(sc.CheckStop()) for sc in self.lagr_mult_stop]) == len(self.lagr_mult_stop)
-        feasible = any([ nmb  == 0 for name, nmb in self.violations_nmb.items() ])
+        feasible = all([ nmb  == 0 for name, nmb in self.violations_nmb.items() ])
         if lm_stop or feasible:
-            if feasible and ~lm_stop:
-                self.SetBestSolution(self.iteration_cmodel)
+            if self.cmodel_partially_feasible is not None:
+                self.SetBestSolution(self.cmodel_partially_feasible)
             return True
