@@ -46,8 +46,9 @@ class CoordinatorGradient:
     def GenerateSolvingPolicy(self):
         def SolvingPolicy(solve, cmodels_local):
             for cml in cmodels_local:
-                if solve(cml) == False:
+                if solve(cml) is None:
                     return False
+            return True
         self.solving_policy = SolvingPolicy
         return self.solving_policy
 
@@ -62,7 +63,7 @@ class CoordinatorGradient:
         self.lagr_mult_stop = []
         for names in self.relaxation_names:
             for _ in range(len(getattr(cmodel, names[1]))):
-                sc = StopCriterion(0.0001, 6, 2, lambda slope, slope_req: slope >= slope_req or slope <= -slope_req)
+                sc = StopCriterion(0.0001, 2, 2, lambda slope, slope_req: slope >= slope_req or slope <= -slope_req)
                 self.lagr_mult_stop.append(sc)
         self.iterating = True            
 
@@ -87,22 +88,31 @@ class CoordinatorGradient:
 
         #update iteration
         self.n_iter += 1
-
-        #update gradient
+                
+        #extract dual variables and gradient
         gradient = []
+        lm = []
         for names in self.relaxation_names:
             relaxed_constraint = getattr(cmodel,  names[0])
             relaxed_set = getattr(cmodel, names[1])
             relaxed_constraint_expr_lhs = cmodel.Suffix[relaxed_constraint]['LHS']
             relaxed_constraint_expr_rhs = cmodel.Suffix[relaxed_constraint]['RHS']
+            relaxed_constraint_sign = cmodel.Suffix[relaxed_constraint]['CompareName']
+            LagrangianMultipliers = getattr(cmodel, names[2])
             for indx in relaxed_set:
+                #gradient
                 grad_val = pyo.value(relaxed_constraint_expr_lhs(cmodel, *indx) - 
                                         relaxed_constraint_expr_rhs(cmodel, *indx))
                 gradient.append(grad_val)
-        self.step_rule.PutGradient(gradient)
+                #dual variables
+                lm_val = ( pyo.value(LagrangianMultipliers[indx]), relaxed_constraint_sign )
+                lm.append(lm_val)
+
+        #update step data
+        self.step_rule.UpdateData(obj = obj_val, gradient = gradient, variables = lm)
 
         #update step
-        self.step = self.step_rule.GetStep(cmodel)
+        self.step = self.step_rule.GetStep()
 
     def UpdateMultipliers(self, cmodel):
         indx_sc = 0

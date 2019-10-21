@@ -58,10 +58,9 @@ class GeneralDecomposer:
         def SolveLocal(cmodel_local):
             cur_solver = self.local_solvers[cmodel_local]
             solution = cur_solver.Solve(cmodel_local)
-            if solution is None:
-                return False
-            self.total_time += solution['Time']
-            return True
+            if solution is not None:
+                self.total_time += solution['Time']
+            return solution
 
         def SolveLocalAll():
             for cml in self.cmodels_local:

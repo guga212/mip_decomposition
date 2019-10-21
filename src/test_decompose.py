@@ -31,12 +31,15 @@ solution_orig = opt_solver.Solve(rs_model.cmodel)
 objective_orig, strains_orig, routes_orig, time_orig = ( solution_orig['Objective'], solution_orig['Strain'], solution_orig['Route'], solution_orig['Time'] )
 
 #create flow decomposer
-#flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorGradient(step_rule=cr.gradstep.DiminishingFractionRule(0.8, 20)), 'CapacityConstraintLinear')
-#flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorSurrogateGradient(step_rule=cr.gradstep.DiminishingFractionRule(0.01, 10)), 'CapacityConstraintLinear')
-flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorFsaGradient(step_rule=cr.gradstep.DiminishingFractionRule(0.3, 10)), 'CapacityConstraintLinear')
+#flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorGradient(step_rule=cr.gradstep.ConstantStepRule(0.1)), 'CapacityConstraintLinear')
+#flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorGradient(step_rule=cr.gradstep.SquareSummableStepRule(0.8, 20)), 'CapacityConstraintLinear')
+#flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorSurrogateGradient(step_rule=cr.gradstep.ConstantStepRule(0.05)), 'CapacityConstraintLinear')
+flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorSurrogateGradient(step_rule=cr.gradstep.SquareSummableStepRule(0.6, 10)), 'CapacityConstraintLinear')
+#flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorSurrogateGradient(step_rule=cr.gradstep.DiminishingStepRule(0.6)), 'CapacityConstraintLinear')
+#flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorFsaGradient(step_rule=cr.gradstep.SquareSummableStepRule(0.3, 10)), 'CapacityConstraintLinear')
 
-# flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorSurrogateGradient(step_rule = cr.gradstep.FlowRecoverStepRule(opt_solver, rs_model)), 'CapacityConstraintLinear')
-# flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorGradient(step_rule = cr.gradstep.FlowRecoverStepRule(opt_solver, rs_model)), 'CapacityConstraintLinear')
+#flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorGradient(step_rule = cr.gradstep.ObjectiveLevelStepRule(0.8)), 'CapacityConstraintLinear')
+#flow_dec = dec.FlowDecomposer(rs_model, cr.CoordinatorSurrogateGradient(step_rule = cr.gradstep.ObjectiveLevelStepRule(0.8)), 'CapacityConstraintLinear')
 
 #solve decomposed
 solution_dec = flow_dec.Solve( opt_solver, [opt_solver for _ in f_list] )

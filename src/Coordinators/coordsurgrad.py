@@ -10,8 +10,7 @@ class CoordinatorSurrogateGradient(CoordinatorGradient):
 
     def GenerateSolvingPolicy(self):
         def SolvingPolicy(solve, cmodels_local):
-            if solve(cmodels_local[self.n_iter % len(cmodels_local)]) == False:
-                return False
+            return solve(cmodels_local[ (self.n_iter - 1) % len(cmodels_local) ])
         self.solving_policy = SolvingPolicy
         return self.solving_policy
 

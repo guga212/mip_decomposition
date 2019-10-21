@@ -29,9 +29,9 @@ rs_model = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, (0,
 rs_model_dec = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
 
 #subnet decomposition init
-# subnet_dec = dec.SubnetsDecomposer(rs_model_dec, cr.CoordinatorGradient(step_rule=cr.gradstep.DiminishingFractionRule(0.1, 20)),
+# subnet_dec = dec.SubnetsDecomposer(rs_model_dec, cr.CoordinatorGradient(step_rule=cr.gradstep.SquareSummableStepRule(0.1, 20)),
 #                                     network.GetWorldNodes())
-subnet_dec = dec.SubnetsDecomposer(rs_model_dec, cr.CoordinatorFsaGradient(step_rule=cr.gradstep.DiminishingFractionRule(0.8, 20)),
+subnet_dec = dec.SubnetsDecomposer(rs_model_dec, cr.CoordinatorFsaGradient(step_rule=cr.gradstep.SquareSummableStepRule(0.8, 20)),
                                     network.GetWorldNodes())
 
 #initialize solvers
