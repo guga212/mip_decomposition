@@ -63,9 +63,15 @@ class CoordinatorGradient:
         self.lagr_mult_stop = []
         for names in self.relaxation_names:
             for _ in range(len(getattr(cmodel, names[1]))):
-                sc = StopCriterion(0.0001, 2, 2, lambda slope, slope_req: slope >= slope_req or slope <= -slope_req)
+                sc = StopCriterion(0.0001, 2, 1, lambda slope, slope_req: slope >= slope_req or slope <= -slope_req)
                 self.lagr_mult_stop.append(sc)
-        self.iterating = True            
+        self.var_stop_crit = []
+        for v in cmodel.component_objects(pyo.Var, active = True):
+            for _ in v:
+                sc = StopCriterion(0.0001, 2, 2, lambda slope, slope_req: slope >= slope_req or slope <= -slope_req)
+                self.var_stop_crit.append(sc)
+
+        self.iterating = True
 
     def SetBestSolution(self, cmodel):
         LagrangianMultipliersBestValues = {}
@@ -80,7 +86,14 @@ class CoordinatorGradient:
 
     def UpdateIterationData(self, cmodel):
         obj_val = pyo.value(cmodel.ObjDual)
+
+        #updated stop crit.
         self.obj_stop_crit.PutValue(obj_val) 
+        index_vsc = 0
+        for v in cmodel.component_objects(pyo.Var, active = True):
+            for indx in v:
+                self.var_stop_crit[index_vsc].PutValue(pyo.value(v[indx]))
+                index_vsc += 1
 
         #write down the best solution
         if(self.best_solution[0] < obj_val):
@@ -111,27 +124,18 @@ class CoordinatorGradient:
         #update step data
         self.step_rule.UpdateData(obj = obj_val, gradient = gradient, variables = lm)
 
-        #update step
-        self.step = self.step_rule.GetStep()
-
     def UpdateMultipliers(self, cmodel):
-        indx_sc = 0
+        #get new dual variables
+        lm_updated = self.step_rule.GetVariables()
+
+        indx_total = 0
         for names in self.relaxation_names:
-            relaxed_constraint = getattr(cmodel,  names[0])
             relaxed_set = getattr(cmodel, names[1])
-            relaxed_constraint_expr_lhs = cmodel.Suffix[relaxed_constraint]['LHS']
-            relaxed_constraint_expr_rhs = cmodel.Suffix[relaxed_constraint]['RHS']
-            relaxed_constraint_sign = cmodel.Suffix[relaxed_constraint]['CompareName']
             LagrangianMultipliers = getattr(cmodel, names[2])
             for indx in relaxed_set:
-                gradient = pyo.value(relaxed_constraint_expr_lhs(cmodel, *indx) - 
-                                        relaxed_constraint_expr_rhs(cmodel, *indx))
-                lm_updated = pyo.value(LagrangianMultipliers[indx]) + self.step * gradient
-                if relaxed_constraint_sign == '<=':
-                    lm_updated = max(0, lm_updated)
-                LagrangianMultipliers[indx] = lm_updated
-                self.lagr_mult_stop[indx_sc].PutValue(pyo.value(LagrangianMultipliers[indx]))
-                indx_sc += 1
+                LagrangianMultipliers[indx] = lm_updated[indx_total]
+                self.lagr_mult_stop[indx_total].PutValue(pyo.value(LagrangianMultipliers[indx]))
+                indx_total += 1
 
     def CheckExit(self):
         obj_stop = self.obj_stop_crit.CheckStop()
@@ -154,4 +158,5 @@ class CoordinatorGradient:
         self.step = 0.001
         self.best_solution = None
         self.obj_stop_crit = None
+        self.var_stop_crit = None
         self.lagr_mult_stop = None

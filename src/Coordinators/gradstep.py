@@ -9,7 +9,19 @@ class IStepRule:
     def Reset(self):
         pass
     def UpdateData(self, **kwargs):
-        pass
+        self.dual_val = kwargs['obj']
+        self.gradient = kwargs['gradient']
+        self.variables = kwargs['variables']
+    def GetVariables(self):
+        ret_val = []
+        step = self.GetStep()
+        for indx, data in enumerate(self.variables):
+            v,s = data
+            z_val = v + step * self.gradient[indx]
+            if s == '<=':
+                z_val = max(0, z_val)
+            ret_val.append(z_val)
+        return ret_val
 
 class ConstantStepRule(IStepRule):
     def __init__(self, step):
@@ -46,8 +58,7 @@ class OptimalObjectiveStepRule(IStepRule):
         self.scale = scale
         self.gradient_norm = 0
     def UpdateData(self, **kwargs):
-        self.dual_val = kwargs['obj']
-        self.gradient = kwargs['gradient']
+        super().UpdateData(**kwargs)
         self.gradient_norm = sum([ gr**2 for gr in self.gradient])
     def GetStep(self, dual_ub):
         self.n_iter += 1
@@ -58,8 +69,8 @@ class OptimalObjectiveStepRule(IStepRule):
         self.n_iter = 0
 
 class ObjectiveLevelStepRule(OptimalObjectiveStepRule):
-    def __init__(self, R):
-        self.param_t = 1.0
+    def __init__(self, R, scale = 1.0):
+        self.param_t = scale
         self.f_lev = {}
         self.f_rec = { 0: float('-inf') }
         self.x_rec = {}
@@ -74,7 +85,6 @@ class ObjectiveLevelStepRule(OptimalObjectiveStepRule):
 
     def UpdateData(self, **kwargs):
         super().UpdateData(**kwargs)
-        self.variables = kwargs['variables']
 
     def InitializeApprox(self):
         self.delta[1] = math.sqrt(self.gradient_norm) * self.R

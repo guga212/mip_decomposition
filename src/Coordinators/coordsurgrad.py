@@ -13,6 +13,17 @@ class CoordinatorSurrogateGradient(CoordinatorGradient):
             return solve(cmodels_local[ (self.n_iter - 1) % len(cmodels_local) ])
         self.solving_policy = SolvingPolicy
         return self.solving_policy
+    
+    def UpdateIterationData(self, cmodel):
+        super().UpdateIterationData(cmodel)
+        self.iteration_cmodel = cp.deepcopy(cmodel)
+
+    def CheckExit(self):
+        var_stop = sum([int(sc.CheckStop()) for sc in self.var_stop_crit]) == len(self.var_stop_crit)
+        lm_stop = sum([int(sc.CheckStop()) for sc in self.lagr_mult_stop]) == len(self.lagr_mult_stop)
+        if lm_stop or var_stop:
+            self.SetBestSolution(self.iteration_cmodel)
+            return True
 
 class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
 
@@ -89,7 +100,7 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
             self.cmodel_partially_feasible = cp.deepcopy(cmodel)
 
     def CheckExit(self):
-        obj_stop = self.obj_stop_crit.CheckStop()
+        var_stop = sum([int(sc.CheckStop()) for sc in self.var_stop_crit]) == len(self.var_stop_crit)
         lm_stop = sum([int(sc.CheckStop()) for sc in self.lagr_mult_stop]) == len(self.lagr_mult_stop)
         feasible = all([ nmb  == 0 for name, nmb in self.violations_nmb.items() ])
         if lm_stop or feasible:

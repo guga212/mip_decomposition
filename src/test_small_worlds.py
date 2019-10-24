@@ -7,9 +7,9 @@ import Coordinators as cr
 
 #random network
 net.NetworkGraph.SetRandomSeed(231)
-world_init_data = [ {'NodesNumber': 3, 'EdgesNumber': 6,  'ExternalEdgesNumber': 3 }, 
-                    {'NodesNumber': 8, 'EdgesNumber': 16, 'ExternalEdgesNumber': 3 },
-                    {'NodesNumber': 4, 'EdgesNumber': 8,  'ExternalEdgesNumber': 2 }
+world_init_data = [ {'NodesNumber': 3, 'EdgesNumber': 8,  'ExternalEdgesNumber': 3 }, 
+                    {'NodesNumber': 12, 'EdgesNumber': 32, 'ExternalEdgesNumber': 3 },
+                    {'NodesNumber': 4, 'EdgesNumber': 12,  'ExternalEdgesNumber': 2 }
                     ]  
 network = net.NetworkGraph.GenerateSmallWorld(world_init_data, 0.5, 3)
 network.GenerateRandomSrcDst(2)
@@ -30,12 +30,15 @@ rs_model_dec = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict,
 
 #subnet decomposition init
 # subnet_dec = dec.SubnetsDecomposer(rs_model_dec, cr.CoordinatorGradient(step_rule=cr.gradstep.SquareSummableStepRule(0.1, 20)),
-#                                     network.GetWorldNodes())
-subnet_dec = dec.SubnetsDecomposer(rs_model_dec, cr.CoordinatorFsaGradient(step_rule=cr.gradstep.SquareSummableStepRule(0.8, 20)),
+#                                    network.GetWorldNodes())
+subnet_dec = dec.SubnetsDecomposer(rs_model_dec, cr.CoordinatorFsaGradient(step_rule=cr.gradstep.SquareSummableStepRule(0.6, 10)),
                                     network.GetWorldNodes())
+# subnet_dec = dec.SubnetsDecomposer(rs_model_dec, cr.CoordinatorFsaGradient(step_rule=cr.gradstep.DiminishingStepRule(0.6)),
+#                                     network.GetWorldNodes())
 
 #initialize solvers
-opt_solver = sm.milpsolvers.GlpkSolver()
+#opt_solver = sm.milpsolvers.GlpkSolver()
+opt_solver = sm.miqppsolver.CplexSolver()
 #opt_solver = sm.minlpsolvers.CouenneSolver()
 
 #solve
