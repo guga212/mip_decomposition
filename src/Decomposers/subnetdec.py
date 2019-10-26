@@ -1,9 +1,9 @@
 import copy as cp
 import pyomo.environ as pyo
 import ModelGenerator as mg
+from ModelGenerator.mgenerator import RsModel
 from .subnetconstr import sm_constraint_rules_lhs, sm_constraint_rules_rhs
 from .subnetobj import ObjectiveLin, ObjectiveQuad
-from .relax import RelaxConstraints
 from .gendec import GeneralDecomposer
 
 class ASubNetRoutingStrainModel(mg.ARoutingStrainModel):
@@ -209,8 +209,11 @@ class SubnetsDecomposer(GeneralDecomposer):
                 (relaxed_constraint_name_2, relaxed_constraint_range_2) ]
 
         #create decomposition required data
-        decompose_group_init_data = []
+        decompose_group_local_rs_models = []
         for subnet in rs_model_sm.init_data[None]['Subnets'][None]:
+            lrsm = RsModel()
+            lrsm.amodel = cp.deepcopy(rs_model_sm.amodel)
+            lrsm.cmodel = None
             init_data_local = cp.deepcopy(rs_model_sm.init_data)
             init_data_local[None]['Subnets'][None] = [subnet]
             init_data_local[None]['SubnetsNodes'] = { subnet: rs_model_sm.init_data[None]['SubnetsNodes'][subnet] }
@@ -219,5 +222,6 @@ class SubnetsDecomposer(GeneralDecomposer):
                                                     for arc in rs_model_sm.init_data[None]['Capacity'] 
                                                     if arc in rs_model_sm.init_data[None]['SubnetsArcs'][subnet] 
                                                     }
-            decompose_group_init_data.append(init_data_local)
-        super().__init__(rs_model_sm, relaxed_data, decompose_group_init_data, coordinator)
+            lrsm.init_data = init_data_local
+            decompose_group_local_rs_models.append(lrsm)
+        super().__init__(rs_model_sm, relaxed_data, decompose_group_local_rs_models, coordinator)

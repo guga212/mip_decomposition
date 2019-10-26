@@ -22,6 +22,22 @@ class ISolver:
                             for flow in cmodel.Flows ]    
             return (obj_val, strain_val, route_val)
 
+        if cmodel.name == 'SeparateVariableContiniousModel':
+            for objective in cmodel.component_objects(pyo.Objective, active = True):
+                obj_val = pyo.value(objective)
+                break
+            strain_val = [pyo.value(cmodel.FlowStrain[flow]) for flow in cmodel.Flows]
+            return (obj_val, strain_val, None)
+
+        if cmodel.name == 'SeparateVariableBinaryModel':
+            for objective in cmodel.component_objects(pyo.Objective, active = True):
+                obj_val = pyo.value(objective)
+                break
+            route_val = [ { arc : pyo.value(cmodel.FlowRoute[flow, arc]) for arc in cmodel.Arcs }
+                            for flow in cmodel.Flows ]
+            return (obj_val, None, route_val)
+
+
         return None
 
     def __init__(self):

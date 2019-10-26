@@ -63,13 +63,17 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
         self.solving_policy = SolvingPolicy
         return self.solving_policy
 
-    def UpgradeModel(self, amodel_local, relaxed_constraints_names):
-        super().UpgradeModel(amodel_local, relaxed_constraints_names)
+    def UpgradeModel(self, amodels, relaxed_constraints_names):
+        super().UpgradeModel(amodels, relaxed_constraints_names)
         for names in self.relaxation_names:
             restored_constraint_list_name = names[0] + 'RestoredList'
             self.restored_names[names[0]] = { 'RestoredConstraintListName': restored_constraint_list_name}
-            resored_constraint_list = pyo.ConstraintList(name = restored_constraint_list_name)
-            setattr(amodel_local, restored_constraint_list_name, resored_constraint_list)
+
+        for aml in amodels:
+            for constr_name in self.restored_names:
+                restored_name = self.restored_names[constr_name]['RestoredConstraintListName']
+                resored_constraint_list = pyo.ConstraintList(name = restored_name)
+                setattr(aml, restored_name, resored_constraint_list)
 
     def UpdateIterationData(self, cmodel):
         super().UpdateIterationData(cmodel)        
@@ -100,7 +104,6 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
             self.cmodel_partially_feasible = cp.deepcopy(cmodel)
 
     def CheckExit(self):
-        var_stop = sum([int(sc.CheckStop()) for sc in self.var_stop_crit]) == len(self.var_stop_crit)
         lm_stop = sum([int(sc.CheckStop()) for sc in self.lagr_mult_stop]) == len(self.lagr_mult_stop)
         feasible = all([ nmb  == 0 for name, nmb in self.violations_nmb.items() ])
         if lm_stop or feasible:

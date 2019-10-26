@@ -12,36 +12,41 @@ class CoordinatorGradient:
         self.step_rule = step_rule
         self.relaxation_names = []
     
-    def UpgradeModel(self, amodel_local, relaxed_constraints_names):
+    def UpgradeModel(self, amodels, relaxed_constraints_names):
 
         for names in relaxed_constraints_names:
             relaxed_constraint_name = names[0]
             relaxed_set_name = names[1]
             LagrangianMultipliersName = 'LagrangianMultipliers' + relaxed_constraint_name
-            relaxed_set = getattr(amodel_local, relaxed_set_name)
-            LagrangianMultipliers = pyo.Param(relaxed_set, mutable = True, initialize = 0)
-            setattr(amodel_local, LagrangianMultipliersName, LagrangianMultipliers)
             self.relaxation_names.append((relaxed_constraint_name, relaxed_set_name, LagrangianMultipliersName))
 
-        obj_rule = amodel_local.Obj.rule
-        def ObjectiveDualRule(model):
-            ret_val = obj_rule(model)
+        for am in amodels:
             for names in self.relaxation_names:
-                relaxed_constraint = getattr(model, names[0])
-                relaxed_constraint_expr_lhs = model.Suffix[relaxed_constraint]['LHS']
-                relaxed_constraint_expr_rhs = model.Suffix[relaxed_constraint]['RHS']
-                relaxed_set = getattr(model, names[1])
-                lagrange_mult = getattr(model, names[2])
-                if relaxed_set.is_constructed() == False:
-                    relaxed_set.construct()
-                ret_val += sum( [ lagrange_mult[arg] * (relaxed_constraint_expr_lhs(model, *arg) - 
-                                                            relaxed_constraint_expr_rhs(model, *arg)) 
-                                    for arg in relaxed_set ] )
-            return ret_val
+                relaxed_set = getattr(am, names[1])
+                LagrangianMultipliers = pyo.Param(relaxed_set, mutable = True, initialize = 0)
+                setattr(am, names[2], LagrangianMultipliers)
             
-        amodel_local.Obj.deactivate()        
-        amodel_local.ObjDual = pyo.Objective(rule = ObjectiveDualRule, sense = pyo.minimize)
-        amodel_local.ObjDual.activate()
+            obj_rule = am.Obj.rule
+            def CreateObjectiveDualRule(obj_rule_original):
+                def ObjectiveDualRule(model):
+                    ret_val = obj_rule_original(model)
+                    for names in self.relaxation_names:
+                        relaxed_constraint = getattr(model, names[0])
+                        relaxed_constraint_expr_lhs = model.Suffix[relaxed_constraint]['LHS']
+                        relaxed_constraint_expr_rhs = model.Suffix[relaxed_constraint]['RHS']
+                        relaxed_set = getattr(model, names[1])
+                        lagrange_mult = getattr(model, names[2])
+                        if relaxed_set.is_constructed() == False:
+                            relaxed_set.construct()
+                        ret_val += sum( [ lagrange_mult[arg] * (relaxed_constraint_expr_lhs(model, *arg) -
+                                                                    relaxed_constraint_expr_rhs(model, *arg))
+                                            for arg in relaxed_set ] )
+                    return ret_val
+                return ObjectiveDualRule
+            
+            am.Obj.deactivate()        
+            am.ObjDual = pyo.Objective(rule = CreateObjectiveDualRule(obj_rule), sense = pyo.minimize)
+            am.ObjDual.activate()
 
     def GenerateSolvingPolicy(self):
         def SolvingPolicy(solve, cmodels_local):

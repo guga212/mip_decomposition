@@ -1,0 +1,118 @@
+import pyomo.environ as pyo
+import copy as cp
+import ModelGenerator as mg
+
+from .sepvarcontconstr import sv_continious_constraint_rules_lhs
+from .sepvarcontconstr import sv_continious_constraint_rules_rhs
+from .sepvarbinconstr import sv_binary_constraint_rules_lhs
+from .sepvarbinconstr import sv_binary_constraint_rules_rhs
+from .sepvarcontobj import ObjectiveContLin, ObjectiveContQuad
+from .sepvarbinobj import ObjectiveBinLin, ObjectiveBinQuad
+from .gendec import GeneralDecomposer
+
+class ASepVarContinious(mg.ARoutingStrainModel):
+    def InitializeVariables(self):
+        self.FlowStrain = pyo.Var(self.Flows, domain = pyo.NonNegativeReals, bounds = self.StrainBoundsRule )
+        self.FlowStrainMulRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.NonNegativeReals)
+    def __init__(self):
+        super().__init__()
+        self.name = 'SeparateVariableContiniousModel'
+class ASepVarBinary(mg.ARoutingStrainModel):
+    def InitializeVariables(self):
+        def RouteBoundsRule(model, *args):
+            return (0, 1)
+        self.FlowRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.NonNegativeReals, bounds = RouteBoundsRule)
+    def __init__(self):
+        super().__init__()
+        self.name = 'SeparateVariableBinaryModel'
+
+
+class SepVarDecomposer(GeneralDecomposer):
+    def __init__(self, rs_model, coordinator):
+        """
+        Specialization of the general decomposer.
+        Relaxes constraints coupling continious
+        binary variables.
+        """
+
+        #relax constraints which has continious and binary constraints simultaneously
+        relaxed_constraint_name_1 = 'FlowStrainMulRouteConstraint1'
+        relaxed_constraint_name_2 = 'FlowStrainMulRouteConstraint4'
+        relaxed_constraint_range = [ (flow, *arc) for flow in rs_model.init_data[None]['Flows'][None] 
+                                        for arc in rs_model.init_data[None]['Arcs'][None] ]
+
+        #define data used for the relaxation
+        relaxation_data = [ (relaxed_constraint_name_1, relaxed_constraint_range),  
+                            (relaxed_constraint_name_2, relaxed_constraint_range) ]
+
+        #complete model
+        rs_model_sv = cp.deepcopy(rs_model)
+
+        #continious local model
+        rs_model_cont = mg.mgenerator.RsModel()
+        rs_model_cont.amodel = ASepVarContinious()
+
+        mg.constrmk.AddConstraint(rs_model_cont.amodel, 'FlowStrainMulRouteConstraint1',
+                                    sv_continious_constraint_rules_lhs['FlowStrainMulRouteConstraint1'],
+                                    sv_continious_constraint_rules_rhs['FlowStrainMulRouteConstraint1'],
+                                    '<=', 'Flows', 'Arcs')
+        mg.constrmk.AddConstraint(rs_model_cont.amodel, 'FlowStrainMulRouteConstraint3',
+                                    sv_continious_constraint_rules_lhs['FlowStrainMulRouteConstraint3'],
+                                    sv_continious_constraint_rules_rhs['FlowStrainMulRouteConstraint3'],
+                                    '<=', 'Flows', 'Arcs')
+        mg.constrmk.AddConstraint(rs_model_cont.amodel, 'FlowStrainMulRouteConstraint4',
+                                    sv_continious_constraint_rules_lhs['FlowStrainMulRouteConstraint4'],
+                                    sv_continious_constraint_rules_rhs['FlowStrainMulRouteConstraint4'],
+                                    '<=', 'Flows', 'Arcs')
+        mg.constrmk.AddConstraint(rs_model_cont.amodel, 'CapacityConstraintLinear', 
+                                    sv_continious_constraint_rules_lhs['CapacityConstraintLinear'],
+                                    sv_continious_constraint_rules_rhs['CapacityConstraintLinear'],
+                                    '<=', 'Arcs')
+        
+        rs_model_cont.amodel.FlowStrainWeight = pyo.Param(mutable = True, default = rs_model_sv.amodel.FlowStrainWeight.default())
+        rs_model_cont.amodel.FlowRouteWeight = pyo.Param(mutable = True, default = rs_model_sv.amodel.FlowRouteWeight.default())
+        objective_name = rs_model_sv.amodel.Suffix[rs_model_sv.amodel.Obj]
+        if objective_name == 'Linear':
+            rs_model_cont.amodel.Obj = pyo.Objective(rule = ObjectiveContLin, sense = pyo.minimize)
+            rs_model_cont.amodel.Suffix[rs_model_cont.amodel.Obj] = 'Linear'
+        if objective_name == 'Quadratic':
+            rs_model_cont.amodel.Obj = pyo.Objective(rule = ObjectiveContQuad, sense = pyo.minimize)
+            rs_model_cont.amodel.Suffix[rs_model_cont.amodel.Obj] = 'Quadratic'
+
+        rs_model_cont.init_data = cp.deepcopy(rs_model_sv.init_data)
+        rs_model_cont.cmodel = None
+
+        #binary local model
+        rs_model_bin = mg.mgenerator.RsModel()
+        rs_model_bin.amodel = ASepVarBinary()
+        mg.constrmk.AddConstraint(rs_model_bin.amodel, 'RouteConstraint',
+                            sv_binary_constraint_rules_lhs['RouteConstraint'],
+                            sv_binary_constraint_rules_rhs['RouteConstraint'],
+                            '==', 'Flows', 'Nodes')
+        mg.constrmk.AddConstraint(rs_model_bin.amodel, 'FlowStrainMulRouteConstraint1',
+                                    sv_binary_constraint_rules_lhs['FlowStrainMulRouteConstraint1'],
+                                    sv_binary_constraint_rules_rhs['FlowStrainMulRouteConstraint1'],
+                                    '<=', 'Flows', 'Arcs')
+        mg.constrmk.AddConstraint(rs_model_bin.amodel, 'FlowStrainMulRouteConstraint4',
+                                    sv_binary_constraint_rules_lhs['FlowStrainMulRouteConstraint4'],
+                                    sv_binary_constraint_rules_rhs['FlowStrainMulRouteConstraint4'],
+                                    '<=', 'Flows', 'Arcs')
+
+        rs_model_bin.amodel.FlowStrainWeight = pyo.Param(mutable = True, default = rs_model_sv.amodel.FlowStrainWeight.default())
+        rs_model_bin.amodel.FlowRouteWeight = pyo.Param(mutable = True, default = rs_model_sv.amodel.FlowRouteWeight.default())
+        objective_name = rs_model_sv.amodel.Suffix[rs_model_sv.amodel.Obj]
+        if objective_name == 'Linear':
+            rs_model_bin.amodel.Obj = pyo.Objective(rule = ObjectiveBinLin, sense = pyo.minimize)
+            rs_model_bin.amodel.Suffix[rs_model_bin.amodel.Obj] = 'Linear'
+        if objective_name == 'Quadratic':
+            rs_model_bin.amodel.Obj = pyo.Objective(rule = ObjectiveBinQuad, sense = pyo.minimize)
+            rs_model_bin.amodel.Suffix[rs_model_bin.amodel.Obj] = 'Quadratic'
+
+        rs_model_bin.init_data = cp.deepcopy(rs_model_sv.init_data)
+        rs_model_bin.cmodel = None
+
+        #decomposed groups initialization
+        decompose_group_local_rs_model = [rs_model_cont, rs_model_bin]
+
+
+        super().__init__(rs_model_sv, relaxation_data, decompose_group_local_rs_model, coordinator)

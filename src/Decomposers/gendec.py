@@ -4,7 +4,7 @@ from .relax import RelaxConstraints
 
 class GeneralDecomposer:
     
-    def __init__(self, rs_model, relaxed_constraints_data, decomposed_group_init_data, coordinator):
+    def __init__(self, rs_model, relaxed_constraints_data, decomposed_rs_models, coordinator):
         """
         General decomposer process given model. It uses relaxed constraint data 
         to generate relaxed version of the mode. After this it decompose model in to
@@ -12,30 +12,46 @@ class GeneralDecomposer:
         is used for solving decomposed models.
         """
 
-        #abstract local model
-        self.amodel_local = cp.deepcopy(rs_model.amodel)
+        #abstract master model
+        self.amodel_master =  cp.deepcopy(rs_model.amodel)
 
-        #define relaxed constraints and relax them
+        #abstract local models
+        self.amodels_local = [ cp.deepcopy(rsm.amodel) for rsm in decomposed_rs_models ]
+
+        #define relaxed constraints and relax them for the master model
         relaxed_constraints_names = []
         for relaxed_constraint_data in relaxed_constraints_data:
             relaxed_constraint_name = relaxed_constraint_data[0]
-            relaxed_constraint = getattr(self.amodel_local, relaxed_constraint_name)
+            relaxed_constraint = getattr(self.amodel_master, relaxed_constraint_name)
             relaxed_constraint_set_name = relaxed_constraint_name + 'RelaxedSet'
             relaxed_constraint_range = relaxed_constraint_data[1]
             relaxed_constraint_set = pyo.Set(dimen = relaxed_constraint.dim(), initialize = relaxed_constraint_range)
-            setattr(self.amodel_local, relaxed_constraint_set_name, relaxed_constraint_set)
+            setattr(self.amodel_master, relaxed_constraint_set_name, relaxed_constraint_set)
             relaxed_constraints_names.append( (relaxed_constraint_name, relaxed_constraint_set_name) )
-        RelaxConstraints(self.amodel_local, relaxed_constraints_names)
+        RelaxConstraints(self.amodel_master, relaxed_constraints_names)
+
+        #define relaxed constraints and relax them for the local models
+        for alm in self.amodels_local:
+            local_relaxed_constraints_names = []
+            for relaxed_constraint_data in relaxed_constraints_data:
+                relaxed_constraint_name = relaxed_constraint_data[0]
+                relaxed_constraint = getattr(alm, relaxed_constraint_name)
+                relaxed_constraint_set_name = relaxed_constraint_name + 'RelaxedSet'
+                relaxed_constraint_range = relaxed_constraint_data[1]
+                relaxed_constraint_set = pyo.Set(dimen = relaxed_constraint.dim(), initialize = relaxed_constraint_range)
+                setattr(alm, relaxed_constraint_set_name, relaxed_constraint_set)
+                local_relaxed_constraints_names.append( (relaxed_constraint_name, relaxed_constraint_set_name) )
+            RelaxConstraints(alm, local_relaxed_constraints_names)
 
         #initialize coordinator
         self.coordinator = coordinator
-        self.coordinator.UpgradeModel(self.amodel_local, relaxed_constraints_names)
+        self.coordinator.UpgradeModel([self.amodel_master, *self.amodels_local], relaxed_constraints_names)
 
         #create concrete models
-        self.cmodel = self.amodel_local.create_instance(data = rs_model.init_data)
+        self.cmodel = self.amodel_master.create_instance(data = rs_model.init_data)
         self.cmodels_local = []
-        for init_data_local in decomposed_group_init_data:
-            self.cmodels_local.append(self.amodel_local.create_instance(data = init_data_local))
+        for indx, alm in enumerate(self.amodels_local):
+            self.cmodels_local.append(alm.create_instance(data = decomposed_rs_models[indx].init_data))
 
         #get the policy for the local problem solving
         self.local_solving_manager = self.coordinator.GenerateSolvingPolicy()

@@ -63,7 +63,6 @@ class OptimalObjectiveStepRule(IStepRule):
     def GetStep(self, dual_ub):
         self.n_iter += 1
         self.step = self.scale * (dual_ub - self.dual_val) / self.gradient_norm
-        print(f'Step value: {self.step}')
         return self.step
     def Reset(self):
         self.n_iter = 0
