@@ -23,7 +23,7 @@ rs_model = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, (0,
 rs_model_heur = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
 
 #initialize solvers
-opt_heur = sm.HeuristicSolver()
+opt_heur = sm.HeuristicSolver('List')
 opt = sm.miqppsolver.CplexSolver()
 
 #solve
