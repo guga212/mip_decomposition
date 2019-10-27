@@ -3,7 +3,7 @@ import pyomo.environ as pyo
 import ModelGenerator as mg
 from ModelGenerator.mgenerator import RsModel
 from .subnetconstr import sm_constraint_rules_lhs, sm_constraint_rules_rhs
-from .subnetobj import ObjectiveLin, ObjectiveQuad
+from .subnetobj import ObjectiveLin, ObjectiveQuad, ObjectiveLog
 from .gendec import GeneralDecomposer
 
 class ASubNetRoutingStrainModel(mg.ARoutingStrainModel):
@@ -84,7 +84,7 @@ class ASubNetRoutingStrainModel(mg.ARoutingStrainModel):
         self.StrainBoundsRule = StrainBoundsRule
 
     def InitializeVariables(self):
-        self.FlowStrain = pyo.Var(self.Flows, self.Subnets, domain = pyo.NonNegativeReals, bounds = self.StrainBoundsRule )
+        self.FlowStrain = pyo.Var(self.Flows, self.Subnets, domain = pyo.PositiveReals, bounds = self.StrainBoundsRule )
         self.FlowRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.Binary)
     
     def __init__(self):
@@ -124,10 +124,15 @@ class SubnetsDecomposer(GeneralDecomposer):
             amodel_sm.Obj = obj_ref_tmp
             amodel_sm.Obj.rule = ObjectiveQuad
             amodel_sm.Suffix[amodel_sm.Obj] = 'Quadratic'
+        if objective_name == 'Logarithmic':
+            amodel_working.del_component(amodel_working.Obj)
+            amodel_sm.Obj = obj_ref_tmp
+            amodel_sm.Obj.rule = ObjectiveLog
+            amodel_sm.Suffix[amodel_sm.Obj] = 'Logarithmic'
 
         #add help varaible if presented in original model
         if hasattr(amodel_working, 'FlowStrainMulRoute') == True:
-            amodel_sm.FlowStrainMulRoute = pyo.Var(amodel_sm.FlowRoute.index_set(), domain = pyo.NonNegativeReals)
+            amodel_sm.FlowStrainMulRoute = pyo.Var(amodel_sm.FlowRoute.index_set(), domain = pyo.PositiveReals)
 
         #add constraints presented in original model
         for constraint in amodel_working.component_objects(pyo.Constraint, active = True):

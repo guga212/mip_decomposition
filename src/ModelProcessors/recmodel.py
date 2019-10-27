@@ -1,5 +1,7 @@
 import ModelGenerator as mg
-from ModelGenerator.objmk import LinearObjectiveGenerator, QuadObjectiveGenerator
+from ModelGenerator.objmk import LinearObjectiveGenerator
+from ModelGenerator.objmk import QuadObjectiveGenerator
+from ModelGenerator.objmk import LogObjectiveGenerator
 import pyomo.environ as pyo
 import copy as cp
 
@@ -24,6 +26,8 @@ def RecoverFeasibleStrain(rs_model, routes, solver):
         obj_maker = LinearObjectiveGenerator()
     if objective_name == 'Quadratic':
         obj_maker = QuadObjectiveGenerator()
+    if objective_name == 'Logarithmic':
+        obj_maker = LogObjectiveGenerator()
     obj_maker(rec_amodel)
         
     #create concrete instance

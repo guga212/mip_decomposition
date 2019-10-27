@@ -11,3 +11,8 @@ def ObjectiveQuad(model):
                                     2 * ( (model.FlowStrain[flow, subnet] - model.FlowLb) / (model.FlowUb - model.FlowLb))
                                     for flow in model.Flows for subnet in model.Subnets) \
     + model.FlowRouteWeight*sum(model.FlowRoute[flow, arc] for flow in model.Flows for arc in model.OriginalArcs)
+
+def ObjectiveLog(model):
+    return 0\
+    -model.FlowStrainWeight*sum(pyo.log(model.FlowStrain[flow, subnet]/(model.FlowUb - model.FlowLb)) for flow in model.Flows for subnet in model.Subnets) \
+    + model.FlowRouteWeight*sum(model.FlowRoute[flow, arc] for flow in model.Flows for arc in model.OriginalArcs)

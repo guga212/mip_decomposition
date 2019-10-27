@@ -58,7 +58,7 @@ def LinearCapacityConstraintsGenerator():
         #multiplier to achive value greater than any posiible flow
         M_MULT = 1.1
 
-        amodel.FlowStrainMulRoute = pyo.Var(amodel.FlowRoute.index_set(), domain = pyo.NonNegativeReals)
+        amodel.FlowStrainMulRoute = pyo.Var(amodel.FlowRoute.index_set(), domain = pyo.PositiveReals)
 
         def FlowStrainMulRouteConstraint1ExprRuleLHS(model, flow, node_s, node_d):
             """Help variable is greater or equal to the flow if the route exist right hand value. """
@@ -103,7 +103,7 @@ def ReformulatedConstraintsGenerator():
         to prevent a flow.
         """
         
-        amodel.FlowStrainMulRoute = pyo.Var(amodel.FlowRoute.index_set(), domain = pyo.NonNegativeReals)
+        amodel.FlowStrainMulRoute = pyo.Var(amodel.FlowRoute.index_set(), domain = pyo.PositiveReals)
         
         def ConstraintRouteExprRuleLHS(model, flow, node):
             """In flow is equal to the out flow left hand value. """            

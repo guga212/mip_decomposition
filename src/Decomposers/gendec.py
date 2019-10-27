@@ -94,6 +94,9 @@ class GeneralDecomposer:
                 for lp in cm_loc.component_objects(pyo.Param, active = True):
                     if lp._mutable:
                         p = getattr(self.cmodel, lp.name)
+                        if lp.is_indexed() is False:
+                            lp = pyo.value(p)
+                            continue
                         for index in lp:
                             lp[index] = pyo.value(p[index])
 

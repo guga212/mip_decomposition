@@ -6,14 +6,14 @@ from .sepvarcontconstr import sv_continious_constraint_rules_lhs
 from .sepvarcontconstr import sv_continious_constraint_rules_rhs
 from .sepvarbinconstr import sv_binary_constraint_rules_lhs
 from .sepvarbinconstr import sv_binary_constraint_rules_rhs
-from .sepvarcontobj import ObjectiveContLin, ObjectiveContQuad
-from .sepvarbinobj import ObjectiveBinLin, ObjectiveBinQuad
+from .sepvarcontobj import ObjectiveContLin, ObjectiveContQuad, ObjectiveContLog
+from .sepvarbinobj import ObjectiveBin
 from .gendec import GeneralDecomposer
 
 class ASepVarContinious(mg.ARoutingStrainModel):
     def InitializeVariables(self):
-        self.FlowStrain = pyo.Var(self.Flows, domain = pyo.NonNegativeReals, bounds = self.StrainBoundsRule )
-        self.FlowStrainMulRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.NonNegativeReals)
+        self.FlowStrain = pyo.Var(self.Flows, domain = pyo.PositiveReals, bounds = self.StrainBoundsRule )
+        self.FlowStrainMulRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.PositiveReals)
     def __init__(self):
         super().__init__()
         self.name = 'SeparateVariableContiniousModel'
@@ -78,6 +78,9 @@ class SepVarDecomposer(GeneralDecomposer):
         if objective_name == 'Quadratic':
             rs_model_cont.amodel.Obj = pyo.Objective(rule = ObjectiveContQuad, sense = pyo.minimize)
             rs_model_cont.amodel.Suffix[rs_model_cont.amodel.Obj] = 'Quadratic'
+        if objective_name == 'Logarithmic':
+            rs_model_cont.amodel.Obj = pyo.Objective(rule = ObjectiveContLog, sense = pyo.minimize)
+            rs_model_cont.amodel.Suffix[rs_model_cont.amodel.Obj] = 'Logarithmic'
 
         rs_model_cont.init_data = cp.deepcopy(rs_model_sv.init_data)
         rs_model_cont.cmodel = None
@@ -101,12 +104,8 @@ class SepVarDecomposer(GeneralDecomposer):
         rs_model_bin.amodel.FlowStrainWeight = pyo.Param(mutable = True, default = rs_model_sv.amodel.FlowStrainWeight.default())
         rs_model_bin.amodel.FlowRouteWeight = pyo.Param(mutable = True, default = rs_model_sv.amodel.FlowRouteWeight.default())
         objective_name = rs_model_sv.amodel.Suffix[rs_model_sv.amodel.Obj]
-        if objective_name == 'Linear':
-            rs_model_bin.amodel.Obj = pyo.Objective(rule = ObjectiveBinLin, sense = pyo.minimize)
-            rs_model_bin.amodel.Suffix[rs_model_bin.amodel.Obj] = 'Linear'
-        if objective_name == 'Quadratic':
-            rs_model_bin.amodel.Obj = pyo.Objective(rule = ObjectiveBinQuad, sense = pyo.minimize)
-            rs_model_bin.amodel.Suffix[rs_model_bin.amodel.Obj] = 'Quadratic'
+        rs_model_bin.amodel.Obj = pyo.Objective(rule = ObjectiveBin, sense = pyo.minimize)
+        rs_model_bin.amodel.Suffix[rs_model_bin.amodel.Obj] = objective_name
 
         rs_model_bin.init_data = cp.deepcopy(rs_model_sv.init_data)
         rs_model_bin.cmodel = None
