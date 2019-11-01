@@ -1,7 +1,8 @@
 from .milpsolvers import GlpkSolver
 from .miqppsolver import CplexSolver
 from .minlpsolvers import CouenneSolver
-from .heuristicd import HeuristicSolver
+from .heuristicd import DHeuristicSolver
+from .heuristicb import BHeuristicSolver
 
 import os as __os_hidden__
 import sys as __sys_hidden__
