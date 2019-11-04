@@ -24,7 +24,8 @@ class IHeuristicSolver:
             else:
                 cmodel.FlowStrain[strain].fix(0)
         start_time_value = time.process_time()
-        node_weight.value = pyo.value(cmodel.Obj)
+        objective_function = [obj for obj in cmodel.component_objects(pyo.Objective, active = True)][0]
+        node_weight.value = pyo.value(objective_function)
         return time.process_time() - start_time_value
 
     def CalculateWeights(self, cmodel):

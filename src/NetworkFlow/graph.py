@@ -64,7 +64,7 @@ class NetworkGraph:
             if nmb_path_attr_prev > 0:
                 for k in path_attr_prev:
                     nx.edges(self.network_graph)[k].pop(f'path_{indx_del}')
-            if (nmb_path_attr_prev) == 0:
+            if indx_del > len(self.flow_list):
                 break
             indx_del += 1
 
