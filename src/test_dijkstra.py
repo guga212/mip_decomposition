@@ -3,9 +3,13 @@ import NetworkFlow as net
 import SolverManager as sm
 import ModelProcessors as mp
 
+#define flow bounds
+FLOW_BOUNDS = (0.1, 3)
+CAPACITY_BOUNDS = (0.2, 2)
+
 #random network
 net.NetworkGraph.SetRandomSeed(228)
-network = net.NetworkGraph.GenerateRandom(10, 38, 0, 2)
+network = net.NetworkGraph.GenerateRandom(10, 38, *CAPACITY_BOUNDS)
 network.GenerateRandomSrcDst(6)
 
 #get network params
@@ -16,14 +20,16 @@ a_list = network.GetArcList()
 c_dict = network.GetCapacityParam()
 
 #create model generator
-nmg = mg.RsModelGenerator(mg.QuadObjectiveGenerator(), mg.RouteConstraintsGenerator(), mg.LinearCapacityConstraintsGenerator())
+nmg = mg.RsModelGenerator(mg.LinearObjectiveGenerator(), mg.RouteConstraintsGenerator(), mg.LinearCapacityConstraintsGenerator())
 
 #create model from the generator
-rs_model = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
-rs_model_heur = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, (0,3))
+rs_model = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, FLOW_BOUNDS)
+rs_model_heur = nmg.CreateCompletRsModel(f_list, sd_dict, n_list, a_list, c_dict, FLOW_BOUNDS)
 
 #initialize solvers
-opt_heur = sm.HeuristicSolver('List')
+opt_heur = sm.DHeuristicSolver('List')
+#opt = sm.minlpsolvers.CouenneSolver()
+#opt = sm.milpsolvers.GlpkSolver()
 opt = sm.miqppsolver.CplexSolver()
 
 #solve
@@ -33,8 +39,8 @@ solution_heur = opt_heur.Solve(rs_model_heur.cmodel)
 objective_heur, strains_heur, routes_heur, time_heur = ( solution_heur['Objective'], solution_heur['Strain'], solution_heur['Route'], solution_heur['Time'] )
 
 #recover feasible for given routes
-soultion_rec = mp.RecoverFeasibleStrain(rs_model, routes_heur, opt)
-objective_rec, strains_rec, routes_rec, rec_cmodel = ( soultion_rec['Objective'], soultion_rec['Strain'], soultion_rec['Route'], soultion_rec['Cmodel'])
+solution_rec = mp.RecoverFeasibleStrain(rs_model, routes_heur, opt)
+objective_rec, strains_rec, routes_rec, rec_cmodel, time_rec = ( solution_rec['Objective'], solution_rec['Strain'], solution_rec['Route'], solution_rec['Cmodel'], solution_rec['Time'])
 
 #validate constraints violations
 viol = mp.FindConstraintsViolation(rs_model.cmodel, strains_orig, routes_orig)
@@ -47,7 +53,7 @@ print(f'Original:\nObjective: {objective_orig}, Time: {time_orig}')
 print('__________________________________________________________')
 print(f'Heuristic:\nObjective: {objective_heur}, Time: {time_heur}')
 print('__________________________________________________________')
-print(f'Recovery:\nObjective: {objective_rec}')
+print(f'Recovery:\nObjective: {objective_rec}, Time: {time_rec} ')
 print('__________________________________________________________')
 print('#####################!END!###############################')
 print('')

@@ -1,6 +1,7 @@
 from .milpsolvers import GlpkSolver
 from .miqppsolver import CplexSolver
 from .minlpsolvers import CouenneSolver
+from .nlpsolvers import IpoptSolver
 from .heuristicd import DHeuristicSolver
 from .heuristicb import BHeuristicSolver
 

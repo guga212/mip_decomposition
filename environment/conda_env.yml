@@ -9,4 +9,5 @@ dependencies:
  - pyomo=5.6
  - pyomo.extras=3.3
  - glpk=4.65
+ - ipopt=3.12
  - libgfortran 3.0
