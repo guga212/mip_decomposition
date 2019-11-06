@@ -1,4 +1,5 @@
 from .coordgrad import CoordinatorGradient
 from .coordsurgrad import CoordinatorSurrogateGradient
 from .coordsurgrad import CoordinatorFsaGradient
-from .gradstep import ConstantStepRule, DiminishingStepRule, SquareSummableStepRule, ObjectiveLevelStepRule
+from .gradstep import ConstantStepRule, DiminishingStepRule, SquareSummableStepRule
+from .gradstep import OptimalObjectiveStepRule, ObjectiveLevelStepRule

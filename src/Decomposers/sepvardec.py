@@ -1,6 +1,6 @@
+import ModelGenerator as mg
 import pyomo.environ as pyo
 import copy as cp
-import ModelGenerator as mg
 
 from .sepvarcontconstr import sv_continious_constraint_rules_lhs
 from .sepvarcontconstr import sv_continious_constraint_rules_rhs
