@@ -103,7 +103,7 @@ class GeneralDecomposer:
         SolveLocalAll()
         while True:
             Compose()
-            coord_ret = self.coordinator.Coordinate(self.cmodel)
+            coord_ret = self.coordinator.Coordinate(self.cmodel, master_solver)
             if coord_ret or (self.n_iter >= self.n_iter_max):
                 break
             Decompose()

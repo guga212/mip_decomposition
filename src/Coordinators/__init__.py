@@ -1,3 +1,4 @@
+from .coordcutplane import CoordinatorCuttingPlane
 from .coordgrad import CoordinatorGradient
 from .coordsurgrad import CoordinatorSurrogateGradient
 from .coordsurgrad import CoordinatorFsaGradient
