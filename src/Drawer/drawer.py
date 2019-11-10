@@ -3,6 +3,13 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 
+def PlotIterationData(name, *data_lists):
+    fig = plt.figure()
+    fig.suptitle(name)
+    fig.canvas.set_window_title(name)
+    for dl in data_lists:
+        plt.plot(dl, linestyle='-')
+
 def PlotNetwork(network, name):
     width_mul = 3
     #create figure, subplots and layout
@@ -11,6 +18,7 @@ def PlotNetwork(network, name):
     nrow = math.ceil((flow_nmb / ncol))
     fig, axes = plt.subplots(nrow, ncol)
     plt.figure(fig.number)
+    fig.canvas.set_window_title(name)
     fig.suptitle(name)
     pos = nx.shell_layout(network.network_graph)
     
@@ -65,5 +73,6 @@ def PlotNetwork(network, name):
     
     #show drawed plot
     plt.show(block = False)
+    
 def ShowAll():
     plt.show(block = True)

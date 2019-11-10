@@ -15,13 +15,13 @@ def RelaxConstraints(amodel, relaxed_constraints_names):
         relaxed_constraint_rule_prev = relaxed_constraint.rule
 
         def RuleGenerator(set_name, rule_prev):
-            def RelaxedCapacityConstraintRule(model, *args):
+            def RelaxedConstraintRule(model, *args):
                 concrete_relaxed_constraint_set = getattr(model, set_name)
                 if concrete_relaxed_constraint_set.is_constructed() == False:
                     concrete_relaxed_constraint_set.construct()
                 if args in concrete_relaxed_constraint_set:
                     return pyo.Constraint.Feasible
                 return rule_prev(model, *args)
-            return RelaxedCapacityConstraintRule
+            return RelaxedConstraintRule
 
         relaxed_constraint.rule = RuleGenerator(relaxed_constraint_set_name, relaxed_constraint_rule_prev)

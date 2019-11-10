@@ -55,8 +55,25 @@ class GeneralDecomposer:
 
         #get the policy for the local problem solving
         self.local_solving_manager = self.coordinator.GenerateSolvingPolicy()
-        
-    
+
+        #initialize data recorder
+        class DataRecorder:
+            def __init__(self):
+                self.master_obj_value_list = None
+                self.local_obj_value_list = None
+                self.multipliers_dict = None
+        self.data_recorded = DataRecorder()
+        self.data_recorded.master_obj_value_list = []
+        self.data_recorded.local_obj_value_list = [[] for _ in self.cmodels_local]
+        self.data_recorded.multipliers_dict = {}
+  
+    @property
+    def RecordedData(self): 
+        return { 'MasterObj': self.data_recorded.master_obj_value_list,
+                    'LocalObj': self.data_recorded.local_obj_value_list,
+                    'Multipliers': self.data_recorded.multipliers_dict,
+                }
+
     def Solve(self, master_solver, local_solvers):
         """
         Finds solution of the original model via 
@@ -68,7 +85,7 @@ class GeneralDecomposer:
 
         self.total_time = 0
         self.n_iter = 0
-        self.n_iter_max = 100
+        self.n_iter_max = 200
         self.local_solvers = { cml: local_solvers[indx] for indx, cml in enumerate(self.cmodels_local) }
 
         def SolveLocal(cmodel_local):
@@ -100,9 +117,33 @@ class GeneralDecomposer:
                         for index in lp:
                             lp[index] = pyo.value(p[index])
 
+        def CollectData(output_data_obj_master = False, output_data_obj_local = False, output_data_params = False):
+            #collect objectives values
+            obj_master = [ obj for obj in self.cmodel.component_objects(pyo.Objective, active = True) ][0]
+            obj_master_value = pyo.value(obj_master)
+            self.data_recorded.master_obj_value_list.append( obj_master_value )
+            if output_data_obj_master:
+                print(f'###MASTER OBJ VALUE: {obj_master_value} ######')
+            for indx, cm_loc in enumerate(self.cmodels_local):
+                obj_local = [ obj for obj in cm_loc.component_objects(pyo.Objective, active = True) ][0]
+                obj_local_val = pyo.value(obj_local)
+                self.data_recorded.local_obj_value_list[indx].append( obj_local_val )
+                if output_data_obj_local:
+                    print(f'###LOCAL[{indx}] OBJ VALUE: {obj_local_val} ######')
+            #collect Lagrangian multipliers
+            for p in self.cmodel.component_objects(pyo.Param, active = True):
+                if p._mutable and 'Lagrangian' in p.name:
+                    if p.name not in self.data_recorded.multipliers_dict:
+                        self.data_recorded.multipliers_dict[p.name] = []
+                    pv_list = [pv.value for pv in p.values()]
+                    self.data_recorded.multipliers_dict[p.name].append(pv_list)
+                    if output_data_params:
+                        print(f'###PARMA <{p.name}>: {pv_list} ######')
+
         SolveLocalAll()
         while True:
             Compose()
+            CollectData(True, False, False)
             coord_ret = self.coordinator.Coordinate(self.cmodel, master_solver)
             if coord_ret or (self.n_iter >= self.n_iter_max):
                 break
