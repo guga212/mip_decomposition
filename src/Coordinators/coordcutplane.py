@@ -68,14 +68,16 @@ class CoordinatorCuttingPlane(Coordinator):
         lm_updated = []
         for components in self.coordination_components:
             for var_indx in components['Variable']:
-                lm_val_new = pyo.value( components['Variable'][var_indx] )
+                lm_val_new = components['Variable'][var_indx].value
                 lm_updated.append(lm_val_new)
         indx_total = 0
         for names in self.relaxation_names:
             relaxed_set = getattr(cmodel, names[1])
             LagrangianMultipliers = getattr(cmodel, names[2])
             for indx in relaxed_set:
-                LagrangianMultipliers[indx] = lm_updated[indx_total]
+                lm_updated_value = lm_updated[indx_total]
+                if lm_updated_value is not None:
+                    LagrangianMultipliers[indx] = lm_updated[indx_total]
                 self.lagr_mult_stop[indx_total].PutValue(pyo.value(LagrangianMultipliers[indx]))
                 indx_total += 1
 
