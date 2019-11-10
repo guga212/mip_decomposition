@@ -7,7 +7,6 @@ class CoordinatorCuttingPlane(Coordinator):
     def __init__(self):
         super().__init__()
         self.coordination_model = None
-        self.coordination_model_instance = None
         self.coordination_components = []
         self.obj_val_rec = []
         self.grad_rec = []
@@ -18,7 +17,6 @@ class CoordinatorCuttingPlane(Coordinator):
         self.coordination_model = pyo.ConcreteModel()
         LM_MIN_VALUE, LM_MAX_VALUE = (-2, 2)
         bounds_map = { '<=': (0, LM_MAX_VALUE), '==': (LM_MIN_VALUE, LM_MAX_VALUE) }
-        coordination_names = []
         for names in self.relaxation_names:
             relaxed_constraint = getattr(cmodel,  names[0])
             relaxed_constraint_sign = cmodel.Suffix[relaxed_constraint]['CompareName']
@@ -30,18 +28,12 @@ class CoordinatorCuttingPlane(Coordinator):
             lm_name = names[2] + 'Var'
             lm = pyo.Var(lm_range, bounds = bounds_map[relaxed_constraint_sign])
             setattr(self.coordination_model, lm_name, lm)
-            coordination_names.append( {'Range': lm_range_name, 'Variable': lm_name} )
+            self.coordination_components.append( {'Range': lm_range, 'Variable': lm} )
         self.coordination_model.Z = pyo.Var()
         def CoordObjRule(model):
             return model.Z
         self.coordination_model.Obj = pyo.Objective(rule = CoordObjRule, sense = pyo.maximize)
-        self.coordination_model.Cuts = pyo.ConstraintList()        
-        #create model instance
-        self.coordination_model_instance = self.coordination_model.create_instance()
-        for names in coordination_names:
-            lm = getattr(self.coordination_model_instance, names['Variable'])
-            lm_range = getattr(self.coordination_model_instance, names['Range'])
-            self.coordination_components.append( {'Range': lm_range, 'Variable': lm} )
+        self.coordination_model.Cuts = pyo.ConstraintList()
 
     def UpgradeModel(self, amodels, relaxed_constraints_names):
         super().UpgradeModel(amodels, relaxed_constraints_names)
@@ -54,15 +46,15 @@ class CoordinatorCuttingPlane(Coordinator):
         self.lm_rec.append( [lm_value for lm_value, sign in self.lm] )
 
         global_indx = 0
-        expr = self.coordination_model_instance.Z - self.obj_val_rec[self.n_iter - 1]
+        expr = self.coordination_model.Z - self.obj_val_rec[self.n_iter - 1]
         for components in self.coordination_components:
             for var_indx in components['Variable']:
                 expr = expr - ( ( components['Variable'][var_indx] - self.lm_rec[self.n_iter - 1][global_indx] ) * self.grad_rec[self.n_iter - 1][global_indx] )                
                 global_indx += 1
-        self.coordination_model_instance.Cuts.add( expr <= 0 )
+        self.coordination_model.Cuts.add( expr <= 0 )
 
     def UpdateMultipliers(self, cmodel, master_solver):
-        result = master_solver.Solve(self.coordination_model_instance, False)
+        result = master_solver.Solve(self.coordination_model, False)
         if result is False:
             return False
         lm_updated = []
