@@ -9,6 +9,8 @@ class Coordinator:
         self.coordinating = False
         self.n_iter = 0
         self.relaxation_names = []
+        self.lm_init_val_eq = 0.0
+        self.lm_init_val_ineq = 0.0
     
     def UpgradeModel(self, amodels, relaxed_constraints_names):
 
@@ -21,7 +23,12 @@ class Coordinator:
         for am in amodels:
             for names in self.relaxation_names:
                 relaxed_set = getattr(am, names[1])
-                LagrangianMultipliers = pyo.Param(relaxed_set, mutable = True, initialize = 0)
+                relaxed_constraint = getattr(am, names[0])
+                relaxed_constraint_sign = am.Suffix[relaxed_constraint]['CompareName']
+                if relaxed_constraint_sign == '<=':
+                    LagrangianMultipliers = pyo.Param(relaxed_set, mutable = True, initialize = self.lm_init_val_ineq)
+                if relaxed_constraint_sign == '==':
+                    LagrangianMultipliers = pyo.Param(relaxed_set, mutable = True, initialize = self.lm_init_val_eq)
                 setattr(am, names[2], LagrangianMultipliers)
             
             obj_rule = am.Obj.rule
@@ -84,11 +91,13 @@ class Coordinator:
             for indx in relaxed_set:
                 lm_value[indx] = pyo.value(LagrangianMultipliers[indx])
             LagrangianMultipliersBestValues[names[0]] = lm_value
-        self.best_solution = (pyo.value(cmodel.ObjDual), LagrangianMultipliersBestValues, cp.deepcopy(cmodel))
+        obj_active = [ obj for obj in cmodel.component_objects(pyo.Objective, active = True) ][0]
+        self.best_solution = (pyo.value(obj_active), LagrangianMultipliersBestValues, cp.deepcopy(cmodel))
 
     def UpdateIterationData(self, cmodel):
         #retrieve dual value
-        self.obj_val = pyo.value(cmodel.ObjDual)
+        obj_active = [ obj for obj in cmodel.component_objects(pyo.Objective, active = True) ][0]
+        self.obj_val = pyo.value(obj_active)
 
         #updated stop crit.
         self.obj_stop_crit.PutValue(self.obj_val) 

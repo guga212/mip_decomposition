@@ -85,7 +85,7 @@ class GeneralDecomposer:
 
         self.total_time = 0
         self.n_iter = 0
-        self.n_iter_max = 200
+        self.n_iter_max = 100
         self.local_solvers = { cml: local_solvers[indx] for indx, cml in enumerate(self.cmodels_local) }
 
         def SolveLocal(cmodel_local):
@@ -112,7 +112,7 @@ class GeneralDecomposer:
                     if lp._mutable:
                         p = getattr(self.cmodel, lp.name)
                         if lp.is_indexed() is False:
-                            lp = pyo.value(p)
+                            lp.value = pyo.value(p)
                             continue
                         for index in lp:
                             lp[index] = pyo.value(p[index])
@@ -138,7 +138,7 @@ class GeneralDecomposer:
                     pv_list = [pv.value for pv in p.values()]
                     self.data_recorded.multipliers_dict[p.name].append(pv_list)
                     if output_data_params:
-                        print(f'###PARMA <{p.name}>: {pv_list} ######')
+                        print(f'###PARAM <{p.name}>: {pv_list} ######')
 
         SolveLocalAll()
         while True:
@@ -154,6 +154,6 @@ class GeneralDecomposer:
         self.cmodel = self.coordinator.RetrieveBest()
 
         ret_val = master_solver.ExtractSolution(self.cmodel)
-        ret_val = { 'ObjectiveDual' : ret_val[0], 'Objective': pyo.value(self.cmodel.Obj),
+        ret_val = { 'ObjectiveDual' : pyo.value(self.cmodel.ObjDual), 'Objective': pyo.value(self.cmodel.Obj),
                     'Strain': ret_val[1], 'Route': ret_val[2], 'Time': self.total_time }
         return ret_val

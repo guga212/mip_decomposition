@@ -16,12 +16,18 @@ sv_binary_constraint_rules_rhs['RouteConstraint'] = ConstraintRouteExprRuleRHS
 
 #binary submodel help variable definition constraint 1
 def FlowStrainMulRouteConstraint1ExprRuleLHS(model, flow, node_s, node_d):
-    return M_MULT * model.FlowUb * model.FlowRoute[flow, node_s, node_d]
+    if flow not in model.Flows:
+         return 0
+    else:
+        return M_MULT * model.FlowUb * model.FlowRoute[flow, node_s, node_d]
 sv_binary_constraint_rules_lhs['FlowStrainMulRouteConstraint1'] = FlowStrainMulRouteConstraint1ExprRuleLHS
 sv_binary_constraint_rules_rhs['FlowStrainMulRouteConstraint1'] = 0
 
 #binary submodel help variable definition constraint 4
 def FlowStrainMulRouteConstraint4ExprRuleLHS(model, flow, node_s, node_d):
-    return -M_MULT * model.FlowUb * model.FlowRoute[flow, node_s, node_d]
+    if flow not in model.Flows:
+         return 0
+    else:
+        return -M_MULT * model.FlowUb * model.FlowRoute[flow, node_s, node_d]
 sv_binary_constraint_rules_lhs['FlowStrainMulRouteConstraint4'] = FlowStrainMulRouteConstraint4ExprRuleLHS
 sv_binary_constraint_rules_rhs['FlowStrainMulRouteConstraint4'] = 0

@@ -106,12 +106,22 @@ class SepVarDecomposer(GeneralDecomposer):
         objective_name = rs_model_sv.amodel.Suffix[rs_model_sv.amodel.Obj]
         rs_model_bin.amodel.Obj = pyo.Objective(rule = ObjectiveBin, sense = pyo.minimize)
         rs_model_bin.amodel.Suffix[rs_model_bin.amodel.Obj] = objective_name
-
+        
         rs_model_bin.init_data = cp.deepcopy(rs_model_sv.init_data)
         rs_model_bin.cmodel = None
 
-        #decomposed groups initialization
-        decompose_group_local_rs_model = [rs_model_cont, rs_model_bin]
+        #decompose bin models via flows
+        rs_model_bin_decomposed = []
+        for flow in rs_model.init_data[None]['Flows'][None]:
+            rsmbd = cp.deepcopy(rs_model_bin)
+            init_data_local = cp.deepcopy(rs_model_sv.init_data)
+            init_data_local[None]['Flows'][None] = [flow]
+            init_data_local[None]['Src'] = { k: v for k, v in init_data_local[None]['Src'].items() if k == flow}
+            init_data_local[None]['Dst'] = { k: v for k, v in init_data_local[None]['Dst'].items() if k == flow}
+            rsmbd.init_data = init_data_local
+            rs_model_bin_decomposed.append(rsmbd)
 
+        #decomposed groups initialization
+        decompose_group_local_rs_model = [rs_model_cont, *rs_model_bin_decomposed]
 
         super().__init__(rs_model_sv, relaxation_data, decompose_group_local_rs_model, coordinator)
