@@ -12,10 +12,10 @@ class BHeuristicSolver(IHeuristicSolver):
         weights = self.CalculateWeights(cmodel_inst)
 
         #results of the algorithm
-        path_flow = {}
+        self.path_flow = {}
     
         #algorithm runing time
-        total_time = 0
+        self.total_time = 0
 
 
         #solve every flow subproblem
@@ -39,6 +39,7 @@ class BHeuristicSolver(IHeuristicSolver):
             distances[src] = start_distance_min
             
             #maximal outer iteration number is equal to the nodes number
+            operation_done = False
             for _ in cmodel_inst.Nodes:
                 #recalculate distance for every edge
                 for node_s, node_e in cmodel_inst.Arcs:
@@ -48,24 +49,15 @@ class BHeuristicSolver(IHeuristicSolver):
                     current_weight = weights[(flow, node_s, node_e)]
                     new_distance, sum_time = self.SumWeights(current_distance, current_weight)
                     value_time = self.SetWeightValue(new_distance, cmodel_inst, flow)
-                    total_time += sum_time + value_time
+                    self.total_time += sum_time + value_time
                     if new_distance.value < distances[node_e].value:                        
                         distances[node_e] = new_distance
+                        operation_done = True
+                #early stop if was no improvements
+                if operation_done is False:
+                    break
             #save path to the destination                        
-            path_flow[flow] = distances[dst]
-            
-        #put found pathes into the original model
-        for route in cmodel.FlowRoute:
-            if (route[1], route[2]) in path_flow[route[0]].components[1]:
-                cmodel.FlowRoute[route].fix(1)
-            else:
-                cmodel.FlowRoute[route].fix(0)
-        for strain in cmodel.FlowStrain:
-                cmodel.FlowStrain[strain].fix(path_flow[strain].components[0])
-
-        obj_val, strain_val, route_val = ISolver.ExtractSolution(cmodel)
-
-        #create standard solver output
-        solution = { 'Objective': obj_val, 'Strain': strain_val, 'Route': route_val, 'Time': total_time }
-        
-        return solution
+            self.path_flow[flow] = distances[dst]
+    
+        #insert solution into the model
+        return self.ExtractSolution(cmodel)

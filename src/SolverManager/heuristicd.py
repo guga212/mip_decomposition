@@ -47,10 +47,10 @@ class DHeuristicSolver(IHeuristicSolver):
 
         weights = self.CalculateWeights(cmodel_inst)
 
-        path_flow = {}
+        self.path_flow = {}
 
         #algorithm runing time
-        total_time = 0
+        self.total_time = 0
         
         for flow in cmodel_inst.Flows:
 
@@ -74,7 +74,7 @@ class DHeuristicSolver(IHeuristicSolver):
 
                 #pop from the priority queue
                 (current_distance, current_node), pop_time = self.PopValue()
-                total_time += pop_time
+                self.total_time += pop_time
 
                 #check if the smallest value in queue is destination
                 if current_node == dst:
@@ -88,32 +88,17 @@ class DHeuristicSolver(IHeuristicSolver):
                 for neighbor in cmodel_inst.NodesOut[current_node]:
                     current_weight = weights[(flow, current_node, neighbor)]
                     distance, sum_time = self.SumWeights(current_distance, current_weight)
-                    total_time += sum_time
+                    self.total_time += sum_time
                     value_time = self.SetWeightValue(distance, cmodel_inst, flow)
-                    total_time += value_time
+                    self.total_time += value_time
 
                     #put newly calculated distance to the priority queue
                     if distance.value < distances[neighbor].value:
                         distances[neighbor] = distance
                         push_time = self.PushValue((distance, neighbor))
-                        total_time += push_time
+                        self.total_time += push_time
             #save path to the destination
-            path_flow[flow] = distances[dst]
+            self.path_flow[flow] = distances[dst]
 
-
-        #put found pathes into the original model
-        for route in cmodel.FlowRoute:
-            if (route[1], route[2]) in path_flow[route[0]].components[1]:
-                cmodel.FlowRoute[route].fix(1)
-            else:
-                cmodel.FlowRoute[route].fix(0)
-        for strain in cmodel.FlowStrain:
-                cmodel.FlowStrain[strain].fix(path_flow[strain].components[0])
-
-        obj_val, strain_val, route_val = ISolver.ExtractSolution(cmodel)
-
-        #create standard solver output
-        solution = { 'Objective': obj_val, 'Strain': strain_val, 'Route': route_val, 'Time': total_time }
-
-        
-        return solution
+        #insert solution into the model
+        return self.ExtractSolution(cmodel)

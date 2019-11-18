@@ -1,3 +1,4 @@
+from .isolver import ISolver
 import pyomo.environ as pyo
 import heapq
 import copy
@@ -12,6 +13,7 @@ class NodeWeight:
         return self.value < other.value
 
 class IHeuristicSolver:
+
     def SetWeightValue(self, node_weight, cmodel, flow):
         for route in cmodel.FlowRoute:
             if (route[1], route[2]) in node_weight.components[1] and flow == route[0]:
@@ -23,6 +25,10 @@ class IHeuristicSolver:
                 cmodel.FlowStrain[strain].fix(node_weight.components[0])
             else:
                 cmodel.FlowStrain[strain].fix(0)
+        if node_weight.components[0] < cmodel.FlowLb.value or node_weight.components[0] > cmodel.FlowUb.value:
+            node_weight.value = float('inf')
+            return 0
+        
         start_time_value = time.process_time()
         objective_function = [obj for obj in cmodel.component_objects(pyo.Objective, active = True)][0]
         node_weight.value = pyo.value(objective_function)
@@ -48,4 +54,29 @@ class IHeuristicSolver:
         return (ret_val, time_elapsed)
 
     def Solve(self, cmodel):
-        pass
+        self.path_flow = {}
+        self.total_time = 0.0
+
+    def ExtractSolution(self, cmodel):
+
+        #no solution was found
+        if len(self.path_flow) == 0:
+            return None
+        if any( [ pf.components is None or pf.value == float('inf') for _, pf in self.path_flow.items() ] ):
+            return None
+
+        #put found pathes into the original model
+        for route in cmodel.FlowRoute:
+            if (route[1], route[2]) in self.path_flow[route[0]].components[1]:
+                cmodel.FlowRoute[route].fix(1)
+            else:
+                cmodel.FlowRoute[route].fix(0)
+        for strain in cmodel.FlowStrain:
+                cmodel.FlowStrain[strain].fix(self.path_flow[strain].components[0])
+
+        obj_val, strain_val, route_val = ISolver.ExtractSolution(cmodel)
+
+        #create standard solver output
+        solution = { 'Objective': obj_val, 'Strain': strain_val, 'Route': route_val, 'Time': self.total_time }
+        
+        return solution

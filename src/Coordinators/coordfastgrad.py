@@ -10,7 +10,7 @@ class CoordinatorFastGradient(Coordinator):
     def __init__(self):
         super().__init__()
         self.lm_init_val_eq = 0.0
-        self.lm_init_val_ineq = 0.0
+        self.lm_init_val_ineq = 0.2
         self.upsilon = None
         self.delta = None
     
@@ -83,9 +83,9 @@ class CoordinatorFastGradient(Coordinator):
                 self.lm_initial.append(pyo.value(LagrangianMultipliers[indx]))
 
     def UpdateMultipliers(self, cmodel):
-        f_ref = -1.36
-        epsilon_error = 1e-3
-        smoothness_updated = max(f_ref - self.best_solution[0], epsilon_error * abs(f_ref) )/ (2 * self.R2)
+        f_ref = -1.369
+        epsilon_error = 0.99
+        smoothness_updated = max( f_ref - self.best_solution[0], epsilon_error * abs(f_ref) )/ (2 * self.R2)
         cmodel.Smoothness = smoothness_updated
 
         k = self.n_iter - 1
@@ -98,17 +98,17 @@ class CoordinatorFastGradient(Coordinator):
         upsilon[k], delta[k], iota[k] = ParamMaker(k)
         upsilon[k + 1], delta[k + 1], iota[k + 1] = ParamMaker(k + 1)
 
-        self.Lmu = self.M + self.B**0.5 / cmodel.Smoothness.value
+        self.Lmu = self.M + self.B/ cmodel.Smoothness.value
         lm_updated = []
         for indx, (lm_value, sign) in enumerate(self.lm):
             pi = lm_value + self.gradient[indx] / self.Lmu
             d = iota[k] * self.gradient[indx] + (1 - iota[k]) * self.dprev
-            epsilon = self.lm_initial[indx] + delta[k] *  d / self.Lmu
+            dzeta = self.lm_initial[indx] + delta[k] *  d / self.Lmu
             self.dprev = d
             if sign == '<=':
                 pi = max(0, pi)
-                epsilon = max(0, epsilon)
-            lm_updated_value = iota[k + 1] * epsilon + (1 - iota[k + 1]) * pi
+                dzeta = max(0, dzeta)
+            lm_updated_value = iota[k + 1] * dzeta + (1 - iota[k + 1]) * pi
             lm_updated.append(lm_updated_value)
 
         indx_total = 0
