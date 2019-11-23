@@ -2,6 +2,9 @@ import math
 import networkx as nx
 import matplotlib.pyplot as plt
 
+import warnings as w
+w.filterwarnings("ignore", category=UserWarning)
+
 
 def PlotIterationData(name, *data_lists):
     fig = plt.figure()

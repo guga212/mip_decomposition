@@ -22,8 +22,9 @@ def FindConstraintsViolation(cmodel, strain_value, route_value):
                      - sum_eq
         violations = abs(violations)
         return violations
+    error_boundary = 1e-6 
     route_constr_violations = [[ConstraintRoute(flow, node) for node in nodes] for flow in flows]
-    route_constr_violations_nmb = sum([ sum([el != 0 for el in row]) for row in route_constr_violations])
+    route_constr_violations_nmb = sum([ sum([abs(el) >= error_boundary for el in row]) for row in route_constr_violations])
 
     def ConstraintCapacity(arc):
         violations = 0
@@ -31,7 +32,7 @@ def FindConstraintsViolation(cmodel, strain_value, route_value):
                      - capacity[arc]
         return  violations
     capacity_constr_violations = { arc: ConstraintCapacity(arc) for arc in arcs }
-    error_boundary = 1e-8
+    error_boundary = 1e-6
     capacity_constr_violations_nmb = sum( [ int(v > error_boundary) for _, v in capacity_constr_violations.items() ] )
 
     result = {'route_constraints' : (route_constr_violations, route_constr_violations_nmb), 

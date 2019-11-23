@@ -17,9 +17,18 @@ class ISolver:
             for objective in cmodel.component_objects(pyo.Objective, active = True):
                 obj_val = pyo.value(objective)
                 break
-            strain_val = { flow: [pyo.value(cmodel.FlowStrain[flow, subnet]) for subnet in cmodel.Subnets] for flow in cmodel.Flows}
-            route_val = [ { arc : pyo.value(cmodel.FlowRoute[flow, arc]) for arc in cmodel.Arcs } 
-                            for flow in cmodel.Flows ]    
+            strain_val = [ max([pyo.value(cmodel.FlowStrain[flow, subnet]) for subnet in cmodel.Subnets]) for flow in cmodel.Flows ]
+            route_val = []
+            for flow in cmodel.Flows:
+                route_val_local = {}
+                for arc in cmodel.Arcs:
+                    current_indx = (arc[1], arc[2])
+                    if current_indx in route_val_local:
+                        route_val_local[current_indx] += pyo.value(cmodel.FlowRoute[flow, arc])
+                        route_val_local[current_indx] = max(min(route_val_local[current_indx], 1), 0)
+                    else:
+                        route_val_local[current_indx] = pyo.value(cmodel.FlowRoute[flow, arc])
+                route_val.append(route_val_local)
             return (obj_val, strain_val, route_val)
 
         if cmodel.name == 'SeparateVariableContiniousModel':
