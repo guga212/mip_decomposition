@@ -65,8 +65,6 @@ def RunTest(network_graph, model_original, model_decomposer,
             if recover_feasible:
                 solver = solvers['Recovered']
                 solution = mp.RecoverFeasibleStrain(model_original, routes, solver)
-                objective, strains, routes, time = ( solution['Objective'], solution['Strain'], 
-                                                solution['Route'], solution['Time'] )
                 if solution is None:
                     results['Recovered'] = None
                     print('###################!RESULTS!#############################')
