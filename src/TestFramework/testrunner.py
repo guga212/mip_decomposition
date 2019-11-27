@@ -55,7 +55,7 @@ def RunTest(network_graph, model_original, model_decomposer,
 
             #draw if needed
             if draw_solution:
-                path_list_sol =  [ [edge for edge, value in route.items() if value == 1] for route in routes ]
+                path_list_sol =  [ [edge for edge, value in route.items() if abs(value - 1) <= 1e-6] for route in routes ]
                 flow_list_sol = strains
                 network_graph.SetPath(*path_list_sol)
                 network_graph.SetFlows(*flow_list_sol)
@@ -93,7 +93,7 @@ def RunTest(network_graph, model_original, model_decomposer,
 
                     #draw if needed
                     if draw_solution:
-                        path_list_sol =  [ [edge for edge, value in route.items() if value == 1] for route in routes ]
+                        path_list_sol =  [ [edge for edge, value in route.items() if abs(value - 1) <= 1e-6] for route in routes ]
                         flow_list_sol = strains
                         network_graph.SetPath(*path_list_sol)
                         network_graph.SetFlows(*flow_list_sol)
@@ -132,7 +132,7 @@ def RunTest(network_graph, model_original, model_decomposer,
 
             #draw if needed
             if draw_solution:
-                path_list_sol =  [ [edge for edge, value in route.items() if value == 1] for route in routes ]
+                path_list_sol =  [ [edge for edge, value in route.items() if abs(value - 1) <= 1e-6] for route in routes ]
                 flow_list_sol = strains
                 network_graph.SetPath(*path_list_sol)
                 network_graph.SetFlows(*flow_list_sol)
