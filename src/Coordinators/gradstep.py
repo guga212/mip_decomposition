@@ -53,10 +53,11 @@ class DiminishingStepRule(IStepRule):
         return self.step
 
 class OptimalObjectiveStepRule(IStepRule):
-    def __init__(self, scale):
+    def __init__(self, obj = 0.0, scale = 1.0):
         self.n_iter = 0
         self.gradient_norm = 0
         self.scale = scale
+        self.SetUb(obj)
     def UpdateData(self, **kwargs):
         super().UpdateData(**kwargs)
         self.gradient_norm = sum([ gr**2 for gr in self.gradient])
@@ -82,7 +83,7 @@ class ObjectiveLevelStepRule(OptimalObjectiveStepRule):
         self.k = 0
         self.K = {1 : 1}
         self.l = 1
-        super().__init__(scale)
+        super().__init__(None, scale)
 
     def InitializeLevelStep(self):
         self.delta[1] = math.sqrt(self.gradient_norm) * self.R

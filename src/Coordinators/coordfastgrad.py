@@ -10,7 +10,7 @@ class CoordinatorFastGradient(Coordinator):
     def __init__(self):
         super().__init__()
         self.lm_init_val_eq = 0.0
-        self.lm_init_val_ineq = 0.2
+        self.lm_init_val_ineq = 0.0
         self.upsilon = None
         self.delta = None
     
@@ -81,7 +81,8 @@ class CoordinatorFastGradient(Coordinator):
                 self.B += pyo.value(relaxed_constraint_expr_lhs(cmodel, *indx)) ** 2
                 self.M += pyo.value(relaxed_constraint_expr_rhs(cmodel, *indx)) ** 2
                 self.lm_initial.append(pyo.value(LagrangianMultipliers[indx]))
-
+        # self.M = 0.0
+        # self.B = 1.0
     def UpdateMultipliers(self, cmodel):
         f_ref = -1.369
         epsilon_error = 0.99
@@ -90,11 +91,14 @@ class CoordinatorFastGradient(Coordinator):
 
         k = self.n_iter - 1
         def ParamMaker(arg):
+            if arg < 0:
+                return (0, 0, 0)
             u = (arg + 1) / 2
             d = (arg + 1) * (arg + 2) / 2
             i = u / d
             return (u, d, i)
         upsilon, delta, iota = {}, {}, {}
+        upsilon[k - 1], delta[k - 1], iota[k - 1] = ParamMaker(k - 1)
         upsilon[k], delta[k], iota[k] = ParamMaker(k)
         upsilon[k + 1], delta[k + 1], iota[k + 1] = ParamMaker(k + 1)
 
@@ -102,8 +106,8 @@ class CoordinatorFastGradient(Coordinator):
         lm_updated = []
         for indx, (lm_value, sign) in enumerate(self.lm):
             pi = lm_value + self.gradient[indx] / self.Lmu
+            dzeta = self.lm_initial[indx] + delta[k - 1] *  self.dprev / self.Lmu
             d = iota[k] * self.gradient[indx] + (1 - iota[k]) * self.dprev
-            dzeta = self.lm_initial[indx] + delta[k] *  d / self.Lmu
             self.dprev = d
             if sign == '<=':
                 pi = max(0, pi)

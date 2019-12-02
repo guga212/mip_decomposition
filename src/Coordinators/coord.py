@@ -78,7 +78,7 @@ class Coordinator:
         self.var_stop_crit = []
         for v in cmodel.component_objects(pyo.Var, active = True):
             for _ in v:
-                sc = StopCriterion(0.0001, 2, 2, lambda slope, slope_req: slope >= slope_req or slope <= -slope_req)
+                sc = StopCriterion(0.0001, 2, 6, lambda slope, slope_req: slope >= slope_req or slope <= -slope_req)
                 self.var_stop_crit.append(sc)
         self.coordinating = True
 
@@ -139,7 +139,8 @@ class Coordinator:
     def CheckExit(self):
         obj_stop = self.obj_stop_crit.CheckStop()
         lm_stop = sum([int(sc.CheckStop()) for sc in self.lagr_mult_stop]) == len(self.lagr_mult_stop)
-        if obj_stop or lm_stop:
+        var_stop = sum([int(sc.CheckStop()) for sc in self.var_stop_crit]) == len(self.var_stop_crit)
+        if obj_stop or lm_stop or var_stop:
             return True
 
     def Coordinate(self, cmodel, master_solver):

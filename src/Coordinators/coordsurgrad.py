@@ -30,6 +30,7 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
     def __init__(self, step_rule = IStepRule()):
         super().__init__(step_rule)
         self.cmodel_partially_feasible = None
+        self.cmodel_partially_feasible_value = float('-inf')
         self.restored_names = {}
 
     def GenerateSolvingPolicy(self):
@@ -101,12 +102,15 @@ class CoordinatorFsaGradient(CoordinatorSurrogateGradient):
                     self.violations_nmb[names[0]] += 1
         #save as if the solution is partially feasible
         if any([ nmb  == 0 for name, nmb in self.violations_nmb.items() ]):
-            self.cmodel_partially_feasible = cp.deepcopy(cmodel)
+            if self.cmodel_partially_feasible_value < self.obj_val:
+                self.cmodel_partially_feasible = cp.deepcopy(cmodel)
+                self.cmodel_partially_feasible_value = self.obj_val
 
     def CheckExit(self):
         lm_stop = sum([int(sc.CheckStop()) for sc in self.lagr_mult_stop]) == len(self.lagr_mult_stop)
+        var_stop = sum([int(sc.CheckStop()) for sc in self.var_stop_crit]) == len(self.var_stop_crit)
         feasible = all([ nmb  == 0 for name, nmb in self.violations_nmb.items() ])
-        if lm_stop or feasible:
+        if lm_stop or var_stop or feasible or (self.cmodel_partially_feasible is not None and self.n_iter >= 20):
             if self.cmodel_partially_feasible is not None:
                 self.SetBestSolution(self.cmodel_partially_feasible)
             return True
