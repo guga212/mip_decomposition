@@ -13,7 +13,7 @@ from .gendec import GeneralDecomposer
 class ASepVarContinious(mg.ARoutingStrainModel):
     def InitializeVariables(self):
         self.FlowStrain = pyo.Var(self.Flows, domain = pyo.PositiveReals, bounds = self.StrainBoundsRule )
-        self.FlowStrainMulRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.NonNegativeReals)
+        self.FlowStrainMulRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.PositiveReals)
     def __init__(self):
         super().__init__()
         self.name = 'SeparateVariableContiniousModel'

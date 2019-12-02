@@ -84,6 +84,7 @@ class GeneralDecomposer:
         """
 
         self.total_time = 0
+        self.local_times = {}
         self.n_iter = 0
         self.n_iter_max = 100
         self.local_solvers = { cml: local_solvers[indx] for indx, cml in enumerate(self.cmodels_local) }
@@ -93,6 +94,9 @@ class GeneralDecomposer:
             solution = cur_solver.Solve(cmodel_local)
             if solution is not None:
                 self.total_time += solution['Time']
+                if self.n_iter not in self.local_times:
+                    self.local_times[self.n_iter] = []
+                self.local_times[self.n_iter].append(solution['Time'])
             return solution
 
         def SolveLocalAll():
@@ -117,7 +121,7 @@ class GeneralDecomposer:
                         for index in lp:
                             lp[index] = pyo.value(p[index])
 
-        def CollectData(output_data_obj_master = False, output_data_obj_local = False, output_data_params = False):
+        def CollectData(output_data_obj_master = False, output_data_obj_local = False, output_data_params = False, output_times = False):
             #loger function
             def LogCollectedData(log_str):
                 prefix = f'#Iteration: {self.n_iter} #'
@@ -143,18 +147,22 @@ class GeneralDecomposer:
                     self.data_recorded.multipliers_dict[p.name].append(pv_list)
                     if output_data_params:
                         LogCollectedData(f'PARAM <{p.name}>: {pv_list}')
+            #collect spent times
+            sum_time = sum(self.local_times[self.n_iter])
+            LogCollectedData(f'SPENT TIME: {self.local_times[self.n_iter ]} := {sum_time}')
+
 
         SolveLocalAll()
         while True:
             Compose()
-            CollectData(True, False, False)
+            CollectData(True, False, False, True)
             coord_ret = self.coordinator.Coordinate(self.cmodel, master_solver)
             if coord_ret or (self.n_iter >= self.n_iter_max):
                 break
+            self.n_iter += 1
             Decompose()
             if self.local_solving_manager(SolveLocal, self.cmodels_local) == False:
                 return None
-            self.n_iter += 1
         self.cmodel = self.coordinator.RetrieveBest()
 
         ret_val = master_solver.ExtractSolution(self.cmodel)
