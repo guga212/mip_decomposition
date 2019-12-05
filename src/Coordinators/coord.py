@@ -53,6 +53,10 @@ class Coordinator:
             am.ObjDual = pyo.Objective(rule = CreateObjectiveDualRule(obj_rule), sense = pyo.minimize)
             am.ObjDual.activate()
 
+    def SetParams(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
     def GenerateSolvingPolicy(self):
         def SolvingPolicy(solve, cmodels_local):
             for cml in cmodels_local:

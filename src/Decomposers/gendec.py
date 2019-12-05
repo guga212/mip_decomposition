@@ -46,6 +46,7 @@ class GeneralDecomposer:
         #initialize coordinator
         self.coordinator = coordinator
         self.coordinator.UpgradeModel([self.amodel_master, *self.amodels_local], relaxed_constraints_names)
+        self.coordinator.SetParams(init_data_master = rs_model.init_data)
 
         #create concrete models
         self.cmodel = self.amodel_master.create_instance(data = rs_model.init_data)
@@ -148,14 +149,15 @@ class GeneralDecomposer:
                     if output_data_params:
                         LogCollectedData(f'PARAM <{p.name}>: {pv_list}')
             #collect spent times
-            sum_time = sum(self.local_times[self.n_iter])
-            LogCollectedData(f'SPENT TIME: {self.local_times[self.n_iter ]} := {sum_time}')
+            if output_times:
+                sum_time = sum(self.local_times[self.n_iter])
+                LogCollectedData(f'SPENT TIME: {self.local_times[self.n_iter ]} := {sum_time}')
 
 
         SolveLocalAll()
         while True:
             Compose()
-            CollectData(True, False, False, True)
+            CollectData(True, False, False, False)
             coord_ret = self.coordinator.Coordinate(self.cmodel, master_solver)
             if coord_ret or (self.n_iter >= self.n_iter_max):
                 break

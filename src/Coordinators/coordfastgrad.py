@@ -2,72 +2,108 @@ from .coord import Coordinator
 from .gradstep import IStepRule
 from .stopcrit import StopCriterion
 import SolverManager as sm
+import ModelProcessors as mp
+import ModelGenerator as mg
 import pyomo.environ as pyo
 import copy as cp
 
 class CoordinatorFastGradient(Coordinator):
-    
+
     def __init__(self):
         super().__init__()
         self.lm_init_val_eq = 0.0
         self.lm_init_val_ineq = 0.0
         self.upsilon = None
         self.delta = None
-    
-    def UpgradeModel(self, amodels, relaxed_constraints_names):
-       super().UpgradeModel(amodels, relaxed_constraints_names)
 
-       for am in amodels:
+    def UpgradeModel(self, amodels, relaxed_constraints_names):
+        self.amodel_master = cp.deepcopy(amodels[0])
+        self.init_data_master = None
+
+        super().UpgradeModel(amodels, relaxed_constraints_names)
+
+        for am in amodels:
             am.Smoothness = pyo.Param(mutable = True, initialize = 0)
+
+            if hasattr(am, 'FlowStrain'):
+                def flow_center_param_init(model, *args):
+                    return model.FlowLb + (model.FlowUb - model.FlowLb) * 0.5
+                flow_center_param = pyo.Param(am.FlowStrain.index_set(), mutable = True, initialize = flow_center_param_init)
+                setattr(am, 'FlowStrainCenter', flow_center_param)
+            if hasattr(am, 'FlowRoute'):
+                route_center_param = pyo.Param(am.FlowRoute.index_set(), mutable = True, initialize = 0.5)
+                setattr(am, 'FlowRouteCenter', route_center_param)
+            if hasattr(am, 'FlowStrainMulRoute'):
+                def artvar_center_param_init(model, *args):
+                    return (model.FlowLb + (model.FlowUb - model.FlowLb) * 0.5)
+                artvar_center_param = pyo.Param(am.FlowStrainMulRoute.index_set(), mutable = True, initialize = artvar_center_param_init)
+                setattr(am, 'FlowStrainMulRouteCenter', artvar_center_param)
+
+
             dual_obj_rule = am.ObjDual.rule
             def CreateObjectiveSmoothDualRule(obj_rule_previous):
                 def ObjectiveSmoothDualRule(model):
                     ret_val = obj_rule_previous(model)
-                    strain_medium = (model.FlowUb - model.FlowLb) / 2
-                    route_medium = 0.5
-
+                    
                     if hasattr(model, 'FlowStrain'):
                         for indx in model.FlowStrain.index_set():
-                            ret_val += 0.5 * model.Smoothness * (model.FlowStrain[indx] - strain_medium) ** 2
-                    
+                            ret_val += 0.5 * model.Smoothness * (model.FlowStrain[indx] - model.FlowStrainCenter[indx]) ** 2
+
                     if hasattr(model, 'FlowRoute'):
                         for indx in model.FlowRoute.index_set():
-                            ret_val += 0.5 * model.Smoothness * (model.FlowRoute[indx] - route_medium) ** 2
+                            ret_val += 0.5 * model.Smoothness * (model.FlowRoute[indx] - model.FlowRouteCenter[indx]) ** 2
+
+                    if hasattr(model, 'FlowStrainMulRoute'):
+                        for indx in model.FlowStrainMulRoute.index_set():
+                            ret_val += 0.5 * model.Smoothness * (model.FlowStrainMulRoute[indx] - model.FlowStrainMulRouteCenter[indx]) ** 2
 
                     return ret_val
                 return ObjectiveSmoothDualRule
 
-            am.ObjDual.deactivate()        
+            am.ObjDual.deactivate()
             am.ObjSmoothDual = pyo.Objective(rule = CreateObjectiveSmoothDualRule(dual_obj_rule), sense = pyo.minimize)
             am.ObjSmoothDual.activate()
-    
+
     def InitCoordination(self, cmodel):
         super().InitCoordination(cmodel)
 
-        self.R2 = None
+        #change default Lagrange multipliers stop criterion
+        self.lagr_mult_stop = []
+        for names in self.relaxation_names:
+            for _ in range(len(getattr(cmodel, names[1]))):
+                sc = StopCriterion(1e-4, 2, 5, lambda slope, slope_req: slope >= slope_req or slope <= -slope_req)
+                self.lagr_mult_stop.append(sc)
+
+        #find maximum of the proximal operator
         def ProximalRule(model):
             ret_val = 0
-            strain_medium = (model.FlowUb - model.FlowLb) / 2
-            route_medium = 0.5
             for indx in model.FlowStrain.index_set():
-                ret_val += 0.5 * (model.FlowStrain[indx] - strain_medium) ** 2
+                ret_val += 0.5 * (model.FlowStrain[indx] - model.FlowStrainCenter[indx]) ** 2
             for indx in model.FlowRoute.index_set():
-                ret_val += 0.5 * (model.FlowRoute[indx] - route_medium) ** 2
-            return ret_val
-        prox_max_model = cp.deepcopy(cmodel)
-        for v in prox_max_model.component_objects(pyo.Var, active = True):
+                ret_val += 0.5 * (model.FlowRoute[indx] - model.FlowRouteCenter[indx]) ** 2
+            if hasattr(model, 'FlowStrainMulRoute'):
+                for indx in model.FlowStrainMulRoute.index_set():
+                    ret_val += 0.5 * (model.FlowStrainMulRoute[indx] - model.FlowStrainMulRouteCenter[indx]) ** 2
+            return ret_val            
+        self.prox_max_model = cp.deepcopy(cmodel)
+        for v in self.prox_max_model.component_objects(pyo.Var, active = True):
             for indx in v:
                 v[indx].unfix()
-        prox_max_model.ObjSmoothDual.deactivate()
-        prox_max_model.ObjProxMax = pyo.Objective(rule = ProximalRule, sense = pyo.maximize)
-        prox_max_model.ObjProxMax.activate()
-        solver = sm.minlpsolvers.CouenneSolver()
-        result = solver.Solve(prox_max_model, False)
+        self.prox_max_model.ObjSmoothDual.deactivate()
+        self.prox_max_model.ObjProxMax = pyo.Objective(rule = ProximalRule, sense = pyo.maximize)
+        self.prox_max_model.ObjProxMax.activate()
+        solver = sm.AslBaronSolver()
+        result = solver.Solve(self.prox_max_model, False)
+        self.R2 = None
         if result is not None:
-            self.R2 = pyo.value(prox_max_model.ObjProxMax)
+            self.R2 = pyo.value(self.prox_max_model.ObjProxMax)
 
-        self.Lmu = 0.0
-        self.dprev = 0.0
+        #archive of the lb solutions
+        self.f_ref_data = []
+        self.best_cmodel_feasible = None
+
+        #init parameters
+        self.Lmu = 0.0        
         self.B = 0
         self.M = 0
         self.lm_initial = []
@@ -78,18 +114,43 @@ class CoordinatorFastGradient(Coordinator):
             relaxed_constraint_expr_rhs = cmodel.Suffix[relaxed_constraint]['RHS']
             LagrangianMultipliers = getattr(cmodel, names[2])
             for indx in relaxed_set:
-                self.B += pyo.value(relaxed_constraint_expr_lhs(cmodel, *indx)) ** 2
                 self.M += pyo.value(relaxed_constraint_expr_rhs(cmodel, *indx)) ** 2
+                self.B += pyo.value(relaxed_constraint_expr_lhs(cmodel, *indx)) ** 2
                 self.lm_initial.append(pyo.value(LagrangianMultipliers[indx]))
-        # self.M = 0.0
-        # self.B = 1.0
+        self.dprev = [0] * len(self.lm_initial)
+        self.M = 0.0
+        self.B = 1.0
+
+    def RetrieveBest(self):
+        #retrieve best feasible if exist
+        if self.best_cmodel_feasible is None:
+            return super().RetrieveBest()
+        return self.best_cmodel_feasible
+
     def UpdateMultipliers(self, cmodel):
-        f_ref = -1.369
-        epsilon_error = 0.99
-        smoothness_updated = max( f_ref - self.best_solution[0], epsilon_error * abs(f_ref) )/ (2 * self.R2)
+
+        #lower bound
+        if (self.n_iter - 1) % 10 == 0:
+            solution = sm.isolver.ISolver.ExtractSolution(cmodel)
+            routes = solution[2]
+            rsm = mg.mgenerator.RsModel()
+            rsm.amodel = self.amodel_master
+            rsm.init_data = self.init_data_master
+            solution_recovered = mp.RecoverFeasibleStrain(rsm, routes, sm.CplexSolver())
+            f_ref_rec = solution_recovered['Objective']
+            self.rec_cmodel = solution_recovered['Cmodel']
+            self.f_ref_data.append(f_ref_rec)
+            self.f_ref = min(self.f_ref_data)
+            if self.f_ref == f_ref_rec:
+                self.best_cmodel_feasible = cp.deepcopy(cmodel)
+        
+        #dynamic smoothness
+        epsilon_error = 1e-3
+        smoothness_updated = max( self.f_ref - self.best_solution[0], epsilon_error * abs(self.f_ref) ) / (2 * self.R2)
         cmodel.Smoothness = smoothness_updated
 
-        k = self.n_iter - 1
+        #iteration params
+        k = self.n_iter
         def ParamMaker(arg):
             if arg < 0:
                 return (0, 0, 0)
@@ -102,19 +163,21 @@ class CoordinatorFastGradient(Coordinator):
         upsilon[k], delta[k], iota[k] = ParamMaker(k)
         upsilon[k + 1], delta[k + 1], iota[k + 1] = ParamMaker(k + 1)
 
-        self.Lmu = self.M + self.B/ cmodel.Smoothness.value
+        #Lagrange multiplier calculate
+        self.Lmu = self.M + self.B / cmodel.Smoothness.value
         lm_updated = []
         for indx, (lm_value, sign) in enumerate(self.lm):
             pi = lm_value + self.gradient[indx] / self.Lmu
-            dzeta = self.lm_initial[indx] + delta[k - 1] *  self.dprev / self.Lmu
-            d = iota[k] * self.gradient[indx] + (1 - iota[k]) * self.dprev
-            self.dprev = d
+            dzeta = self.lm_initial[indx] + delta[k - 1] *  self.dprev[indx] / self.Lmu
+            d = iota[k] * self.gradient[indx] + (1 - iota[k]) * self.dprev[indx]
+            self.dprev[indx] = d
             if sign == '<=':
                 pi = max(0, pi)
                 dzeta = max(0, dzeta)
             lm_updated_value = iota[k + 1] * dzeta + (1 - iota[k + 1]) * pi
             lm_updated.append(lm_updated_value)
 
+        #Lagrange multiplier update
         indx_total = 0
         for names in self.relaxation_names:
             relaxed_set = getattr(cmodel, names[1])
@@ -123,11 +186,20 @@ class CoordinatorFastGradient(Coordinator):
                 LagrangianMultipliers[indx] = lm_updated[indx_total]
                 self.lagr_mult_stop[indx_total].PutValue(pyo.value(LagrangianMultipliers[indx]))
                 indx_total += 1
-        
 
+        #Update proximal parameters#
+        if hasattr(cmodel, 'FlowStrain'):
+            for indx in cmodel.FlowStrain.index_set():
+                cmodel.FlowStrainCenter[indx] = cmodel.FlowStrain[indx].value
+        if hasattr(cmodel, 'FlowRoute'):
+            for indx in cmodel.FlowRoute.index_set():
+                cmodel.FlowRouteCenter[indx] = cmodel.FlowRoute[indx].value
+        if hasattr(cmodel, 'FlowStrainMulRoute'):
+            for indx in cmodel.FlowStrainMulRoute.index_set():
+                cmodel.FlowStrainMulRouteCenter[indx] = cmodel.FlowStrainMulRoute[indx].value
 
-    def CheckExit(self):
-        self.obj_stop_crit.CheckStop()
+    def CheckExit(self):        
         lm_stop = sum([int(sc.CheckStop()) for sc in self.lagr_mult_stop]) == len(self.lagr_mult_stop)
-        if lm_stop:
+        var_stop = sum([int(sc.CheckStop()) for sc in self.var_stop_crit]) == len(self.var_stop_crit)
+        if lm_stop or var_stop:
             return True
