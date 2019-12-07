@@ -99,6 +99,7 @@ class CoordinatorFastGradient(Coordinator):
             self.R2 = pyo.value(self.prox_max_model.ObjProxMax)
 
         #archive of the lb solutions
+        self.f_ref = 0
         self.f_ref_data = []
         self.best_cmodel_feasible = None
 

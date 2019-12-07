@@ -2,12 +2,9 @@ import ModelGenerator as mg
 import pyomo.environ as pyo
 import copy as cp
 
-from .sepvarcontconstr import sv_continious_constraint_rules_lhs
-from .sepvarcontconstr import sv_continious_constraint_rules_rhs
-from .sepvarbinconstr import sv_binary_constraint_rules_lhs
-from .sepvarbinconstr import sv_binary_constraint_rules_rhs
-from .sepvarcontobj import ObjectiveContLin, ObjectiveContQuad, ObjectiveContLog
-from .sepvarbinobj import ObjectiveBin
+from .sepvarconstr import sv_continious_constraint_rules_lhs, sv_continious_constraint_rules_rhs, \
+                            sv_binary_constraint_rules_lhs, sv_binary_constraint_rules_rhs 
+from .sepvarobj import ObjectiveContLin, ObjectiveContQuad, ObjectiveContLog, ObjectiveBin
 from .gendec import GeneralDecomposer
 
 class ASepVarContinious(mg.ARoutingStrainModel):
