@@ -102,7 +102,7 @@ def ReformulatedConstraintsGenerator():
         are unable to force a flow, but they are able 
         to prevent a flow.
         """
-        
+        amodel.Reformulated = True
         amodel.FlowStrainMulRoute = pyo.Var(amodel.FlowRoute.index_set(), domain = pyo.PositiveReals)
         
         def ConstraintRouteExprRuleLHS(model, flow, node):

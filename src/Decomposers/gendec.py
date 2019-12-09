@@ -157,7 +157,8 @@ class GeneralDecomposer:
         SolveLocalAll()
         while True:
             Compose()
-            CollectData(True, False, False, False)
+            CollectData(output_data_obj_master = True, output_data_obj_local = False, 
+                        output_data_params = False, output_times = True)
             coord_ret = self.coordinator.Coordinate(self.cmodel, master_solver)
             if coord_ret or (self.n_iter >= self.n_iter_max):
                 break
