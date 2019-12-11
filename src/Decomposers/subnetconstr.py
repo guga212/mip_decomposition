@@ -1,7 +1,7 @@
 #changed constraints container
 sm_constraint_rules_lhs = {}
 sm_constraint_rules_rhs = {}
-M_MULT = 1.1
+
 
 #subnets route constraint
 def ConstraintRouteExprRuleLHS(model, flow, subnet, node):
@@ -26,9 +26,9 @@ sm_constraint_rules_rhs['CapacityConstraint'] = ConstraintCapacityExprRuleRHS
 #subnets help variable definition constraint 1
 def FlowStrainMulRouteConstraint1ExprRuleLHS(model, flow, subnet, node_s, node_d):
     return -model.FlowStrainMulRoute[flow, subnet, node_s, node_d] + model.FlowStrain[flow, subnet] \
-            + M_MULT * model.FlowUb * model.FlowRoute[flow, subnet, node_s, node_d]
+            +  model.FlowUb * model.FlowRoute[flow, subnet, node_s, node_d]
 def FlowStrainMulRouteConstraint1ExprRuleRHS(model, flow, subnet, node_s, node_d):
-    return M_MULT * model.FlowUb
+    return model.FlowUb
 sm_constraint_rules_lhs['FlowStrainMulRouteConstraint1'] = FlowStrainMulRouteConstraint1ExprRuleLHS
 sm_constraint_rules_rhs['FlowStrainMulRouteConstraint1'] = FlowStrainMulRouteConstraint1ExprRuleRHS
 
@@ -41,7 +41,7 @@ sm_constraint_rules_rhs['FlowStrainMulRouteConstraint3'] = 0
 #subnets help variable definition constraint 4
 def FlowStrainMulRouteConstraint4ExprRuleLHS(model, flow, subnet, node_s, node_d):
     return model.FlowStrainMulRoute[flow, subnet, node_s, node_d] \
-            - M_MULT * model.FlowUb * model.FlowRoute[flow, subnet, node_s, node_d]
+            - model.FlowUb * model.FlowRoute[flow, subnet, node_s, node_d]
 sm_constraint_rules_lhs['FlowStrainMulRouteConstraint4'] = FlowStrainMulRouteConstraint4ExprRuleLHS
 sm_constraint_rules_rhs['FlowStrainMulRouteConstraint4'] = 0
 

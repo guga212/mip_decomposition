@@ -9,8 +9,9 @@ import copy as cp
 
 class CoordinatorFastGradient(Coordinator):
 
-    def __init__(self):
+    def __init__(self, optimal_obj = None):
         super().__init__()
+        self.optimal_obj = optimal_obj
         self.lm_init_val_eq = 0.0
         self.lm_init_val_ineq = 0.0
         self.upsilon = None
@@ -119,6 +120,7 @@ class CoordinatorFastGradient(Coordinator):
                 self.B += pyo.value(relaxed_constraint_expr_lhs(cmodel, *indx)) ** 2
                 self.lm_initial.append(pyo.value(LagrangianMultipliers[indx]))
         self.dprev = [0] * len(self.lm_initial)
+        #change parameter for faste convergence
         self.M = 0.0
         self.B = 1.0
 
@@ -131,19 +133,22 @@ class CoordinatorFastGradient(Coordinator):
     def UpdateMultipliers(self, cmodel):
 
         #lower bound
-        if (self.n_iter - 1) % 10 == 0:
-            solution = sm.isolver.ISolver.ExtractSolution(cmodel)
-            routes = solution[2]
-            rsm = mg.mgenerator.RsModel()
-            rsm.amodel = self.amodel_master
-            rsm.init_data = self.init_data_master
-            solution_recovered = mp.RecoverFeasibleStrain(rsm, routes, sm.CplexSolver())
-            f_ref_rec = solution_recovered['Objective']
-            self.rec_cmodel = solution_recovered['Cmodel']
-            self.f_ref_data.append(f_ref_rec)
-            self.f_ref = min(self.f_ref_data)
-            if self.f_ref == f_ref_rec:
-                self.best_cmodel_feasible = cp.deepcopy(cmodel)
+        if self.optimal_obj is None:
+            if (self.n_iter - 1) % 10 == 0:
+                solution = sm.isolver.ISolver.ExtractSolution(cmodel)
+                routes = solution[2]
+                rsm = mg.mgenerator.RsModel()
+                rsm.amodel = self.amodel_master
+                rsm.init_data = self.init_data_master
+                solution_recovered = mp.RecoverFeasibleStrain(rsm, routes, sm.CplexSolver())
+                f_ref_rec = solution_recovered['Objective']
+                self.rec_cmodel = solution_recovered['Cmodel']
+                self.f_ref_data.append(f_ref_rec)
+                self.f_ref = min(self.f_ref_data)
+                if self.f_ref == f_ref_rec:
+                    self.best_cmodel_feasible = cp.deepcopy(cmodel)
+        else:
+            self.f_ref = self.optimal_obj
         
         #dynamic smoothness
         epsilon_error = 1e-3
