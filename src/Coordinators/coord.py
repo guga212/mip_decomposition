@@ -99,6 +99,9 @@ class Coordinator:
         self.best_solution = (pyo.value(obj_active), LagrangianMultipliersBestValues, cp.deepcopy(cmodel))
 
     def UpdateIterationData(self, cmodel):
+        #update iteration
+        self.n_iter += 1
+
         #retrieve dual value
         obj_active = [ obj for obj in cmodel.component_objects(pyo.Objective, active = True) ][0]
         self.obj_val = pyo.value(obj_active)
@@ -114,10 +117,7 @@ class Coordinator:
         #write down the best solution
         if(self.best_solution[0] < self.obj_val):
             self.SetBestSolution(cmodel)
-
-        #update iteration
-        self.n_iter += 1
-                
+                        
         #extract dual variables and gradient
         self.gradient = []
         self.lm = []
@@ -155,12 +155,3 @@ class Coordinator:
         if self.CheckExit() == True:
             return True
         return False
-
-    def ResetCoordination(self):
-        self.coordinating = False
-        self.n_iter = 0
-        self.step = 0.001
-        self.best_solution = None
-        self.obj_stop_crit = None
-        self.var_stop_crit = None
-        self.lagr_mult_stop = None

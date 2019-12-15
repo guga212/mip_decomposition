@@ -8,8 +8,8 @@ from .gendec import GeneralDecomposer
 
 class ASepVarContinious(mg.ARoutingStrainModel):
     def InitializeVariables(self):
-        self.FlowStrain = pyo.Var(self.Flows, domain = pyo.PositiveReals, bounds = self.StrainBoundsRule )
-        self.FlowStrainMulRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.PositiveReals)
+        self.FlowStrain = pyo.Var(self.Flows, domain = pyo.NonNegativeReals, bounds = self.StrainBoundsRule )
+        self.FlowStrainMulRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.NonNegativeReals)
     def __init__(self):
         super().__init__()
         self.name = 'SeparateVariableContiniousModel'
@@ -99,25 +99,27 @@ class SepVarDecomposerOrig(GeneralDecomposer):
 
 
         #####DEBUG######
-        # rs_model_no_decomposition = cp.deepcopy(rs_model)
-        # rs_model_sv = cp.deepcopy(rs_model)
-        # decompose_group_local_rs_model = [rs_model_no_decomposition]
+        #decompose_group_local_rs_model = [rs_model_cont, rs_model_bin]
 
-        # # relaxed_constraint_name_1 = 'FlowStrainMulRouteConstraint1'
-        # # relaxed_constraint_name_2 = 'FlowStrainMulRouteConstraint4'
-        # # relaxed_constraint_range = [ (flow, *arc) for flow in rs_model.init_data[None]['Flows'][None] 
-        # #                                 for arc in rs_model.init_data[None]['Arcs'][None] ]
-        # # relaxation_data = [ (relaxed_constraint_name_1, relaxed_constraint_range),  
-        # #                     (relaxed_constraint_name_2, relaxed_constraint_range) ]
+        #rs_model_no_decomposition = cp.deepcopy(rs_model)
+        #rs_model_sv = cp.deepcopy(rs_model)
+        #decompose_group_local_rs_model = [rs_model_no_decomposition]
 
-        # # relaxed_constraint_name = 'FlowStrainMulRouteConstraint1'
-        # # relaxed_constraint_range = [ (flow, *arc) for flow in rs_model.init_data[None]['Flows'][None] 
-        # #                                 for arc in rs_model.init_data[None]['Arcs'][None] ]
-        # # relaxation_data = [ (relaxed_constraint_name, relaxed_constraint_range)]
+        # relaxed_constraint_name_1 = 'FlowStrainMulRouteConstraint1'
+        # relaxed_constraint_name_2 = 'FlowStrainMulRouteConstraint4'
+        # relaxed_constraint_range = [ (flow, *arc) for flow in rs_model.init_data[None]['Flows'][None] 
+        #                                 for arc in rs_model.init_data[None]['Arcs'][None] ]
+        # relaxation_data = [ (relaxed_constraint_name_1, relaxed_constraint_range),  
+        #                     (relaxed_constraint_name_2, relaxed_constraint_range) ]
 
-        # # relaxed_constraint_name_1 = 'CapacityConstraintLinear'
-        # # relaxed_constraint_range = [ arc for arc in rs_model.init_data[None]['Arcs'][None]]
-        # # relaxation_data = [ (relaxed_constraint_name_1, relaxed_constraint_range) ]
+        # relaxed_constraint_name = 'FlowStrainMulRouteConstraint1'
+        # relaxed_constraint_range = [ (flow, *arc) for flow in rs_model.init_data[None]['Flows'][None] 
+        #                                 for arc in rs_model.init_data[None]['Arcs'][None] ]
+        # relaxation_data = [ (relaxed_constraint_name, relaxed_constraint_range)]
+
+        # relaxed_constraint_name_1 = 'CapacityConstraintLinear'
+        # relaxed_constraint_range = [ arc for arc in rs_model.init_data[None]['Arcs'][None]]
+        # relaxation_data = [ (relaxed_constraint_name_1, relaxed_constraint_range) ]
         ################
 
         GeneralDecomposer.__init__(self, rs_model_sv, relaxation_data, decompose_group_local_rs_model, coordinator)

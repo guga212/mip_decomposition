@@ -20,12 +20,12 @@ class IHeuristicSolver:
                 cmodel.FlowRoute[route].fix(1)
             else:
                 cmodel.FlowRoute[route].fix(0)
-        for strain in cmodel.FlowStrain:
-            if strain == flow:
-                cmodel.FlowStrain[strain].fix(node_weight.components[0])
+        for flow_iter in cmodel.FlowStrain:
+            if flow_iter == flow:
+                cmodel.FlowStrain[flow_iter].fix(node_weight.components[0])
             else:
-                cmodel.FlowStrain[strain].fix(0)
-        if node_weight.components[0] < cmodel.FlowLb.value or node_weight.components[0] > cmodel.FlowUb.value:
+                cmodel.FlowStrain[flow_iter].fix(0)
+        if node_weight.components[0] < cmodel.FlowLb.value:
             node_weight.value = float('inf')
             return 0
         
@@ -40,7 +40,7 @@ class IHeuristicSolver:
             for node in cmodel.Nodes:
                 for node_out in cmodel.NodesOut[node]:
                     weight_dict[(flow, node, node_out)] = NodeWeight()
-                    weight_dict[(flow, node, node_out)].components = ( cmodel.Capacity[node, node_out], [(node, node_out)] )
+                    weight_dict[(flow, node, node_out)].components = ( min(cmodel.Capacity[node, node_out], cmodel.FlowUb.value), [(node, node_out)] )
         return weight_dict
 
     def SumWeights(self, wa, wb):

@@ -3,6 +3,7 @@ import ModelProcessors as mp
 import NetworkFlow as net
 import Drawer as dr
 import copy as cp
+import time as t
 
 def RunTest(network_graph, model_original, model_decomposer, 
             solvers, solve_original = False, solve_decomposed = False,
@@ -17,7 +18,9 @@ def RunTest(network_graph, model_original, model_decomposer,
         #solve decomposed problem
         solver_master = solvers['Master']
         solvers_local = solvers['Decomposed']
+        start_time_decomposed = t.perf_counter()
         solution = model_decomposer.Solve(solver_master, solvers_local)
+        elapsed_time_decomposed = t.perf_counter() - start_time_decomposed
 
         #show decomposition iterating data
         if draw_progress:
@@ -36,10 +39,11 @@ def RunTest(network_graph, model_original, model_decomposer,
                                                                 solution['Strain'], solution['Route'], 
                                                                 solution['Time'] )
 
-            results['Decomposed'] = { 'Objective': objective, 'ObjectiveDual': objective_dual, 'Time': time }
+            results['Decomposed'] = { 'Objective': objective, 'ObjectiveDual': objective_dual, 'Time': time, 
+                                        'Total time': elapsed_time_decomposed}
 
             print('###################!RESULTS!#############################')
-            print(f'Decomposed:\nObjective: {objective}, Objective Dual: {objective_dual}, Time: {time}')
+            print(f'Decomposed:\nObjective: {objective}, Objective Dual: {objective_dual}, Time: {time}, Total time: {elapsed_time_decomposed}')
             
             #validate constraints violations
             if validate_feasability:
@@ -64,7 +68,9 @@ def RunTest(network_graph, model_original, model_decomposer,
             #recover feasible for given routes
             if recover_feasible:
                 solver = solvers['Recovered']
+                start_time_recovered = t.perf_counter()
                 solution = mp.RecoverFeasibleStrain(model_original, routes, solver)
+                elapsed_time_recovered = t.perf_counter() - start_time_recovered
                 if solution is None:
                     results['Recovered'] = None
                     print('###################!RESULTS!#############################')
@@ -74,10 +80,10 @@ def RunTest(network_graph, model_original, model_decomposer,
                     objective, strains, routes, time = ( solution['Objective'], solution['Strain'], 
                                                         solution['Route'], solution['Time'] )
 
-                    results['Recovered'] = { 'Objective': objective, 'Time': time }
+                    results['Recovered'] = { 'Objective': objective, 'Time': time, 'Total time': elapsed_time_recovered }
 
                     print('###################!RESULTS!#############################')
-                    print(f'Recovered:\nObjective: {objective}, Time: {time}')
+                    print(f'Recovered:\nObjective: {objective}, Time: {time}, Total time: {elapsed_time_recovered}')
                     
                     #validate constraints violations
                     if validate_feasability:
@@ -103,7 +109,9 @@ def RunTest(network_graph, model_original, model_decomposer,
     if solve_original:
         network_graph = cp.deepcopy(network_graph)
         solver = solvers['Original']
+        start_time_original = t.perf_counter()
         solution = solver.Solve(model_original.cmodel)
+        elapsed_time_original = t.perf_counter() - start_time_original
         if solution is None:
             results['Original'] = None
             print('###################!RESULTS!#############################')
@@ -113,10 +121,10 @@ def RunTest(network_graph, model_original, model_decomposer,
             objective, strains, routes, time = ( solution['Objective'], solution['Strain'], 
                                                 solution['Route'], solution['Time'] )
 
-            results['Original'] = { 'Objective': objective, 'Time': time }
+            results['Original'] = { 'Objective': objective, 'Time': time, 'Total time': elapsed_time_original }
                         
             print('###################!RESULTS!#############################')
-            print(f'Original:\nObjective: {objective}, Time: {time}')
+            print(f'Original:\nObjective: {objective}, Time: {time}, Total time: {elapsed_time_original}')
 
             #validate constraints violations
             if validate_feasability:
