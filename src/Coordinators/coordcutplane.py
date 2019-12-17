@@ -57,7 +57,7 @@ class CoordinatorCuttingPlane(Coordinator):
         self.lagr_mult_stop = []
         for names in self.relaxation_names:
             for _ in range(len(getattr(cmodel, names[1]))):
-                sc = StopCriterion(1e-5, 2, 2, lambda slope, slope_req: slope >= slope_req or slope <= -slope_req)
+                sc = StopCriterion(1e-3, 2, 2, lambda slope, slope_req: slope >= slope_req or slope <= -slope_req)
                 self.lagr_mult_stop.append(sc)
 
     def UpdateIterationData(self, cmodel):
@@ -94,21 +94,14 @@ class CoordinatorCuttingPlane(Coordinator):
                     LagrangianMultipliers[indx] = lm_updated[indx_total]
                 self.lagr_mult_stop[indx_total].PutValue(pyo.value(LagrangianMultipliers[indx]))
                 indx_total += 1
+                
+        return master_solver.time
 
     def CheckExit(self):
         lm_stop = sum([int(sc.CheckStop()) for sc in self.lagr_mult_stop]) == len(self.lagr_mult_stop)
-        if lm_stop:
+        var_stop = sum([int(sc.CheckStop()) for sc in self.var_stop_crit]) == len(self.var_stop_crit)
+        if lm_stop or var_stop:
             return True
-
-    def Coordinate(self, cmodel, master_solver):
-        if self.coordinating == False:
-            self.InitCoordination(cmodel)
-        self.UpdateIterationData(cmodel)
-        self.UpdateMultipliers(cmodel, master_solver)
-        if self.CheckExit() == True:
-            return True
-        return False
-
 
 class CoordinatorCuttingPlaneProximal(CoordinatorCuttingPlane):    
     def __init__(self):
@@ -194,3 +187,5 @@ class CoordinatorCuttingPlaneProximal(CoordinatorCuttingPlane):
                     LagrangianMultipliers[indx] = lm_updated[indx_total]
                 self.lagr_mult_stop[indx_total].PutValue(pyo.value(LagrangianMultipliers[indx]))
                 indx_total += 1
+                
+        return master_solver.time

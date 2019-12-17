@@ -137,8 +137,8 @@ class Coordinator:
                 lm_val = ( pyo.value(LagrangianMultipliers[indx]), relaxed_constraint_sign )
                 self.lm.append(lm_val)
 
-    def UpdateMultipliers(self, cmodel):
-        pass
+    def UpdateMultipliers(self, cmodel, master_solver):
+        return 0
 
     def CheckExit(self):
         obj_stop = self.obj_stop_crit.CheckStop()
@@ -148,10 +148,10 @@ class Coordinator:
             return True
 
     def Coordinate(self, cmodel, master_solver):
+        result = {'Time': 0, 'Terminate': False}
         if self.coordinating == False:
             self.InitCoordination(cmodel)
         self.UpdateIterationData(cmodel)
-        self.UpdateMultipliers(cmodel)
-        if self.CheckExit() == True:
-            return True
-        return False
+        result['Time'] = self.UpdateMultipliers(cmodel, master_solver)
+        result['Terminate'] = self.CheckExit()
+        return result

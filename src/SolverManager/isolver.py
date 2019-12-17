@@ -52,9 +52,11 @@ class ISolver:
     def __init__(self):
         self.solver = None
         self.solution = None
-        self.solver_output = None
+        self.solver_output = None        
 
     def Solve(self, cmodel, extract_solution = True):
+
+        self.time = 0
         self.solver_output = self.solver.solve(cmodel)
 
         solver_ok = (self.solver_output.solver.status == pyo.SolverStatus.ok or
@@ -65,11 +67,11 @@ class ISolver:
                             self.solver_output.solver.termination_condition == pyo.TerminationCondition.feasible)
 
         if solver_ok and problem_solved:
+            self.time = self.solver_output.Solver.Time
             if extract_solution is False:
                 return True
-            obj_val, strain_val, route_val = ISolver.ExtractSolution(cmodel)
-            time = self.solver_output.Solver.Time
-            self.solution = { 'Objective': obj_val, 'Strain': strain_val, 'Route': route_val, 'Time': time }
+            obj_val, strain_val, route_val = ISolver.ExtractSolution(cmodel)            
+            self.solution = { 'Objective': obj_val, 'Strain': strain_val, 'Route': route_val, 'Time': self.time }
         else:
             if extract_solution is False:
                 return False

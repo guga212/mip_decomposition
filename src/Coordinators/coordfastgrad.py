@@ -130,8 +130,7 @@ class CoordinatorFastGradient(Coordinator):
             return super().RetrieveBest()
         return self.best_cmodel_feasible
 
-    def UpdateMultipliers(self, cmodel):
-
+    def UpdateMultipliers(self, cmodel, master_solver):
         #lower bound
         if self.optimal_obj is None:
             if (self.n_iter - 1) % 10 == 0:

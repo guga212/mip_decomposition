@@ -75,7 +75,7 @@ class GeneralDecomposer:
                     'Multipliers': self.data_recorded.multipliers_dict,
                 }
 
-    def Solve(self, master_solver, local_solvers):
+    def Solve(self, master_solver, local_solvers, max_iteration = 100):
         """
         Finds solution of the original model via 
         solving relaxed and decomposed models.
@@ -85,9 +85,10 @@ class GeneralDecomposer:
         """
 
         self.total_time = 0
+        self.coordination_time = 0
         self.local_times = {}
         self.n_iter = 0
-        self.n_iter_max = 100
+        self.n_iter_max = max_iteration
         self.local_solvers = { cml: local_solvers[indx] for indx, cml in enumerate(self.cmodels_local) }
 
         def SolveLocal(cmodel_local):
@@ -150,8 +151,8 @@ class GeneralDecomposer:
                         LogCollectedData(f'PARAM <{p.name}>: {pv_list}')
             #collect spent times
             if output_times:
-                sum_time = sum(self.local_times[self.n_iter])
-                LogCollectedData(f'SPENT TIME: {self.local_times[self.n_iter ]} := {sum_time}')
+                sum_time = sum(self.local_times[self.n_iter]) + self.coordination_time                 
+                LogCollectedData(f'SPENT TIME. COORDINATION:[{self.coordination_time}] + LOCAL:{self.local_times[self.n_iter ]} := {sum_time}')
 
 
         SolveLocalAll()
@@ -159,8 +160,9 @@ class GeneralDecomposer:
             Compose()
             CollectData(output_data_obj_master = True, output_data_obj_local = False, 
                         output_data_params = False, output_times = True)
-            coord_ret = self.coordinator.Coordinate(self.cmodel, master_solver)
-            if coord_ret or (self.n_iter >= self.n_iter_max):
+            coord_ret =  self.coordinator.Coordinate(self.cmodel, master_solver)
+            self.coordination_time = coord_ret['Time'] if coord_ret['Time'] is not None else 0
+            if coord_ret['Terminate'] == True or (self.n_iter >= self.n_iter_max):
                 break
             self.n_iter += 1
             Decompose()

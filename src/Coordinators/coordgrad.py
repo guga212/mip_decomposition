@@ -14,7 +14,7 @@ class CoordinatorGradient(Coordinator):
         #update step data
         self.step_rule.UpdateData(obj = self.obj_val, gradient = self.gradient, variables = self.lm)
 
-    def UpdateMultipliers(self, cmodel):
+    def UpdateMultipliers(self, cmodel, master_solver):
         #get new dual variables
         lm_updated = self.step_rule.GetVariables()
 
