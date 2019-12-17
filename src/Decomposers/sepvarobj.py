@@ -14,7 +14,7 @@ sv_objectives['Linear'] = ObjectiveContLin
 
 def ObjectiveContQuad(model):
     return 0\
-    -model.FlowStrainWeight*sum( (model.FlowStrain[flow] - model.FlowLb) ** 2  for flow in model.Flows )
+    +model.FlowStrainWeight*sum( (model.FlowStrain[flow] - model.FlowUb) ** 2  for flow in model.Flows )
 sv_objectives['Quadratic'] = ObjectiveContQuad
 
 def ObjectiveContLog(model):

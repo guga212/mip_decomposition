@@ -7,7 +7,7 @@ def ObjectiveLin(model):
 
 def ObjectiveQuad(model):
     return 0\
-    -model.FlowStrainWeight*sum( (model.FlowStrain[flow, subnet] - model.FlowLb) ** 2 for flow in model.Flows for subnet in model.Subnets ) \
+    +model.FlowStrainWeight*sum( (model.FlowStrain[flow, subnet] - model.FlowUb) ** 2 for flow in model.Flows for subnet in model.Subnets ) \
     + model.FlowRouteWeight*sum(model.FlowRoute[flow, arc] for flow in model.Flows for arc in model.OriginalArcs)
 
 def ObjectiveLog(model):

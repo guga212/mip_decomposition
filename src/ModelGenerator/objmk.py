@@ -19,7 +19,7 @@ def QuadObjectiveGenerator(binary_weight = 0.05, contin_weight = 1.0):
         amodel.FlowRouteWeight = pyo.Param(mutable = True, within = pyo.PositiveReals, default = binary_weight)
         def ObjectiveQuad(model):
             return 0\
-            -model.FlowStrainWeight*sum((model.FlowStrain[flow] - model.FlowLb) ** 2 for flow in model.Flows) \
+            +model.FlowStrainWeight*sum((model.FlowStrain[flow] - model.FlowUb) ** 2 for flow in model.Flows) \
             + model.FlowRouteWeight*sum(model.FlowRoute[flow, arc] for flow in model.Flows for arc in model.Arcs)
         amodel.Obj = pyo.Objective(rule = ObjectiveQuad, sense = pyo.minimize)
         amodel.Suffix[amodel.Obj] = 'Quadratic'
