@@ -139,7 +139,7 @@ class CoordinatorFastGradient(Coordinator):
                 rsm = mg.mgenerator.RsModel()
                 rsm.amodel = self.amodel_master
                 rsm.init_data = self.init_data_master
-                solution_recovered = mp.RecoverFeasibleStrain(rsm, routes, sm.CplexSolver())
+                solution_recovered = mp.RecoverFeasibleStrain(rsm, routes, sm.IpoptSolver())
                 f_ref_rec = solution_recovered['Objective']
                 self.rec_cmodel = solution_recovered['Cmodel']
                 self.f_ref_data.append(f_ref_rec)
