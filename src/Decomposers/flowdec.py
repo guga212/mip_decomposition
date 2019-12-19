@@ -17,6 +17,9 @@ class FlowDecomposer(GeneralDecomposer):
 
         if hasattr(rs_model.amodel, 'CapacityConstraintLinear'):
             relaxed_constraint_name = 'CapacityConstraintLinear'
+        
+        if hasattr(rs_model.amodel, 'CapacityConstraintRef'):
+            relaxed_constraint_name = 'CapacityConstraintRef'
 
         relaxed_constraint_range = [ arc for arc in  rs_model.init_data[None]['Arcs'][None] ]
         relaxation_data = [(relaxed_constraint_name, relaxed_constraint_range)]
