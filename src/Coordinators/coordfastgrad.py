@@ -160,7 +160,7 @@ class CoordinatorFastGradient(Coordinator):
             if arg < 0:
                 return (0, 0, 0)
             u = (arg + 1) / 2
-            d = (arg + 1) * (arg + 2) / 2
+            d = (arg + 1) * (arg + 2) / 4
             i = u / d
             return (u, d, i)
         upsilon, delta, iota = {}, {}, {}

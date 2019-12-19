@@ -115,7 +115,7 @@ def RunTest(network_graph, model_original, model_decomposer,
         if solution is None:
             results['Original'] = None
             print('###################!RESULTS!#############################')
-            print('Original:\nSolution was not found!')
+            print(f'Original:\nSolution was not found!, Total time: {elapsed_time_original}')
             print('__________________________________________________________')
         else:
             objective, strains, routes, time = ( solution['Objective'], solution['Strain'], 

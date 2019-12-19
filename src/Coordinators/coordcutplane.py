@@ -106,6 +106,7 @@ class CoordinatorCuttingPlane(Coordinator):
 class CoordinatorCuttingPlaneProximal(CoordinatorCuttingPlane):    
     def __init__(self):
         super().__init__()
+        self.coord_solver_failed = False
         self.dual_aprox_rec = [None]
         self.diff_real = None
         self.diff_pred = None
@@ -145,7 +146,7 @@ class CoordinatorCuttingPlaneProximal(CoordinatorCuttingPlane):
         if self.n_iter >= 2:
             self.diff_real = self.obj_val_rec[self.n_iter - 1] - self.obj_val_rec[self.n_iter - 2]
             self.diff_pred = self.dual_aprox_rec[self.n_iter - 1] - self.obj_val_rec[self.n_iter - 2]
-            if not (self.diff_real <= m * self.diff_pred):
+            if not (self.diff_real >= m * self.diff_pred):
                 real_step = False
 
         #updated lagrange multipliers proximity
@@ -157,6 +158,7 @@ class CoordinatorCuttingPlaneProximal(CoordinatorCuttingPlane):
         #check solver failure
         result = master_solver.Solve(self.coordination_model, False)
         if result is False:
+            self.coord_solver_failed = True
             return False
         
         #update approx values
@@ -189,3 +191,9 @@ class CoordinatorCuttingPlaneProximal(CoordinatorCuttingPlane):
                 indx_total += 1
                 
         return master_solver.time
+
+    def CheckExit(self):
+        if self.coord_solver_failed == True:
+            return True
+        else:
+            return super().CheckExit()
