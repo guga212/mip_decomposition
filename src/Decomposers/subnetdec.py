@@ -84,7 +84,7 @@ class ASubNetRoutingStrainModel(mg.ARoutingStrainModel):
         self.StrainBoundsRule = StrainBoundsRule
 
     def InitializeVariables(self):
-        self.FlowStrain = pyo.Var(self.Flows, self.Subnets, domain = pyo.PositiveReals, bounds = self.StrainBoundsRule )
+        self.FlowStrain = pyo.Var(self.Flows, self.Subnets, domain = pyo.NonNegativeReals, bounds = self.StrainBoundsRule )
         self.FlowRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.Binary)
     
     def __init__(self):
@@ -132,7 +132,7 @@ class SubnetsDecomposer(GeneralDecomposer):
 
         #add help varaible if presented in original model
         if hasattr(amodel_working, 'FlowStrainMulRoute') == True:
-            amodel_sm.FlowStrainMulRoute = pyo.Var(amodel_sm.FlowRoute.index_set(), domain = pyo.PositiveReals)
+            amodel_sm.FlowStrainMulRoute = pyo.Var(amodel_sm.FlowRoute.index_set(), domain = pyo.NonNegativeReals)
 
         #add constraints presented in original model
         for constraint in amodel_working.component_objects(pyo.Constraint, active = True):

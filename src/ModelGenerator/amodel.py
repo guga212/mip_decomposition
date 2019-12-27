@@ -34,7 +34,7 @@ class ARoutingStrainModel(pyo.AbstractModel):
         self.StrainBoundsRule = StrainBoundsRule
 
     def InitializeVariables(self):
-        self.FlowStrain = pyo.Var(self.Flows, domain = pyo.PositiveReals, bounds = self.StrainBoundsRule)
+        self.FlowStrain = pyo.Var(self.Flows, domain = pyo.NonNegativeReals, bounds = self.StrainBoundsRule)
         self.FlowRoute = pyo.Var(self.Flows, self.Arcs, domain = pyo.Binary)
 
     def InitializeSuffix(self):
