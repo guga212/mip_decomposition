@@ -5,7 +5,7 @@ from .stopcrit import StopCriterion
 import pyomo.environ as pyo
 
 class CoordinatorCuttingPlane(Coordinator):
-    def __init__(self):
+    def __init__(self, lm_min = -1, lm_max = 1):
         super().__init__()
         self.coordination_model = None
         self.coordination_components = []
@@ -13,11 +13,13 @@ class CoordinatorCuttingPlane(Coordinator):
         self.obj_val_rec = []
         self.grad_rec = []
         self.lm_rec = []
+        self.lm_min = lm_min
+        self.lm_max = lm_max
 
     def InitMasterModel(self, cmodel):
         #create coordination master problem
         self.coordination_model = pyo.ConcreteModel()
-        LM_MIN_VALUE, LM_MAX_VALUE = (-1, 1)
+        LM_MIN_VALUE, LM_MAX_VALUE = (self.lm_min, self.lm_max)
         bounds_map = { '<=': (0, LM_MAX_VALUE), '==': (LM_MIN_VALUE, LM_MAX_VALUE) }
         for names in self.relaxation_names:
             relaxed_constraint = getattr(cmodel,  names[0])
@@ -104,8 +106,8 @@ class CoordinatorCuttingPlane(Coordinator):
             return True
 
 class CoordinatorCuttingPlaneProximal(CoordinatorCuttingPlane):    
-    def __init__(self):
-        super().__init__()
+    def __init__(self, lm_min = -1, lm_max = 1):
+        super().__init__(lm_min, lm_max)
         self.coord_solver_failed = False
         self.dual_aprox_rec = [None]
         self.diff_real = None
@@ -116,7 +118,10 @@ class CoordinatorCuttingPlaneProximal(CoordinatorCuttingPlane):
 
         for indx, names in enumerate(self.relaxation_names):
             lm_param_name = names[2] + 'Param'
-            lm_param = pyo.Param(self.coordination_components[indx]['Range'],  mutable = True)
+            relaxed_constraint = getattr(cmodel,  names[0])
+            relaxed_constraint_sign = cmodel.Suffix[relaxed_constraint]['CompareName']
+            lm_param_init_value = self.lm_init_val_eq if relaxed_constraint_sign == '==' else self.lm_init_val_ineq
+            lm_param = pyo.Param(self.coordination_components[indx]['Range'],  mutable = True, initialize = lm_param_init_value)
             setattr(self.coordination_model, lm_param_name, lm_param)
             self.coordination_components[indx].update( {'Parameter': lm_param} )
             self.coordination_components_names[indx].update( {'Parameter': lm_param_name} )        
@@ -142,15 +147,15 @@ class CoordinatorCuttingPlaneProximal(CoordinatorCuttingPlane):
         
         #calculate diff
         real_step = True
-        m = 0.6
+        m = 0.3
         if self.n_iter >= 2:
             self.diff_real = self.obj_val_rec[self.n_iter - 1] - self.obj_val_rec[self.n_iter - 2]
             self.diff_pred = self.dual_aprox_rec[self.n_iter - 1] - self.obj_val_rec[self.n_iter - 2]
-            if not (self.diff_real >= m * self.diff_pred):
+            if self.diff_real <= m * self.diff_pred:
                 real_step = False
 
         #updated lagrange multipliers proximity
-        if real_step == True:
+        if real_step == False:
             for components in self.coordination_components:
                 for indx in components['Range']:
                     components['Parameter'][indx] = components['Variable'][indx].value
@@ -168,7 +173,6 @@ class CoordinatorCuttingPlaneProximal(CoordinatorCuttingPlane):
         #remove cut if dual is equal zero                
         for indx in self.coordination_model.Cuts:
             if self.coordination_model.Cuts[indx].active:
-                #print(f'Dual value cuts[{indx}]: {self.coordination_model.dual[self.coordination_model.Cuts[indx]]}')
                 if (abs(self.coordination_model.dual[self.coordination_model.Cuts[indx]]) <= 1e-3 and
                         len(self.coordination_model.Cuts) > 1):
                     self.coordination_model.Cuts[indx].deactivate()
