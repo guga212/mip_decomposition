@@ -162,6 +162,7 @@ class GeneralDecomposer:
                         output_data_params = False, output_times = True)
             coord_ret =  self.coordinator.Coordinate(self.cmodel, master_solver)
             self.coordination_time = coord_ret['Time'] if coord_ret['Time'] is not None else 0
+            self.total_time += self.coordination_time
             if coord_ret['Terminate'] == True or (self.n_iter >= self.n_iter_max):
                 break
             self.n_iter += 1
