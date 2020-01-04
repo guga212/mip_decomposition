@@ -38,9 +38,9 @@ class BHeuristicSolver(IHeuristicSolver):
             distances = {node: start_distance_max for node in cmodel_inst.Nodes}
             distances[src] = start_distance_min
             
-            #maximal outer iteration number is equal to the nodes number
-            operation_done = False
-            for _ in cmodel_inst.Nodes:
+            #maximal outer iteration number is equal to the nodes number - 1
+            for _ in range(len(cmodel_inst.Nodes) - 1):
+                operation_done = False
                 #recalculate distance for every edge
                 for node_s, node_e in cmodel_inst.Arcs:
                     current_distance = distances[node_s]
