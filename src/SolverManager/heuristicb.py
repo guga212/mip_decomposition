@@ -43,6 +43,9 @@ class BHeuristicSolver(IHeuristicSolver):
                 operation_done = False
                 #recalculate distance for every edge
                 for node_s, node_e in cmodel_inst.Arcs:
+                    #do not leave destination node
+                    if node_s == dst:
+                        continue
                     current_distance = distances[node_s]
                     if current_distance.value == float('inf'):
                         continue
