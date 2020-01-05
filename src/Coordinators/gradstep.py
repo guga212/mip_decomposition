@@ -123,14 +123,17 @@ class ObjectiveLevelStepRule(OptimalObjectiveStepRule):
         #step 5 : projections
         self.f_lev[self.k] = self.f_rec[self.K[self.l]] + self.delta[self.l]
         self.z = []
+        self.lm_updated = []
         self.step = self.scale * (self.f_lev[self.k] - self.dual_val) / self.gradient_norm
 
         for indx, data in enumerate(self.variables):
             v,s = data
             z_val = v +  self.step * self.gradient[indx]
+            self.z.append(z_val)
+            lm_val = z_val
             if s == '<=':
-                z_val = max(0, z_val)
-            self.z.append(z_val)        
+                lm_val = max(0, z_val)
+            self.lm_updated.append(lm_val)
 
         #step 6 : path update
         self.sigma[self.k + 1] = self.sigma[self.k] + math.sqrt( sum( [ (z - self.variables[indx][0])**2 for indx, z in enumerate(self.z) ] ) )
@@ -140,4 +143,4 @@ class ObjectiveLevelStepRule(OptimalObjectiveStepRule):
         if self.k == 0:
             self.InitializeLevelStep()
         self.IterateLevelStep()
-        return self.z
+        return self.lm_updated
