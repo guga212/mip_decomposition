@@ -9,14 +9,20 @@ Comparsions = {
 def AddConstraint(amodel, constr_name, expr_rule_lhs, expr_rule_rhs, comp_op, *constr_sets_names):
     if callable(expr_rule_rhs):
         def ConstraintRule(model, *args):
-            return Comparsions[comp_op](expr_rule_lhs(model, *args), expr_rule_rhs(model, *args))
+            ret_val = Comparsions[comp_op](expr_rule_lhs(model, *args), expr_rule_rhs(model, *args))
+            if isinstance(ret_val, bool):
+                ret_val = pyo.Constraint.Feasible if ret_val == True else pyo.Constraint.Infeasible
+            return ret_val
     else:
         expr_rhs_value = expr_rule_rhs
         def expr_rhs_proxy(*args):
             return expr_rhs_value
         expr_rule_rhs = expr_rhs_proxy
         def ConstraintRule(model, *args):
-            return Comparsions[comp_op](expr_rule_lhs(model, *args), expr_rhs_value)
+            ret_val = Comparsions[comp_op](expr_rule_lhs(model, *args), expr_rhs_value)
+            if isinstance(ret_val, bool):
+                ret_val = pyo.Constraint.Feasible if ret_val == True else pyo.Constraint.Infeasible
+            return ret_val
     
     constr_sets = [getattr(amodel, name) for name in constr_sets_names] 
     constraint = pyo.Constraint(*constr_sets, rule = ConstraintRule, name = constr_name)

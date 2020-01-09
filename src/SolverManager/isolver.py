@@ -61,7 +61,8 @@ class ISolver:
 
         solver_ok = (self.solver_output.solver.status == pyo.SolverStatus.ok or
                         self.solver_output.solver.status == pyo.SolverStatus.warning)
-        problem_solved = (self.solver_output.solver.termination_condition == pyo.TerminationCondition.optimal)
+        problem_solved = (self.solver_output.solver.termination_condition == pyo.TerminationCondition.optimal or
+                            self.solver_output.solver.termination_condition == pyo.TerminationCondition.maxTimeLimit)
         if solver_ok and problem_solved:
             self.time = self.solver_output.Solver.Time
             if extract_solution is False:

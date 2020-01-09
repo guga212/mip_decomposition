@@ -5,8 +5,8 @@ import Drawer as dr
 import copy as cp
 import time as t
 
-def RunTest(network_graph, model_original, model_decomposer, 
-            solvers, solve_original = False, solve_decomposed = False,
+def RunTest(network_graph, model_original, model_decomposer, solvers, 
+            solve_original = False, solve_decomposed = False, max_iter = 100,
             validate_feasability = False, recover_feasible = False, 
             draw_progress = False, draw_solution = False):
     
@@ -19,7 +19,7 @@ def RunTest(network_graph, model_original, model_decomposer,
         solver_master = solvers['Master']
         solvers_local = solvers['Decomposed']
         start_time_decomposed = t.perf_counter()
-        solution = model_decomposer.Solve(solver_master, solvers_local)
+        solution = model_decomposer.Solve(solver_master, solvers_local, max_iter)
         elapsed_time_decomposed = t.perf_counter() - start_time_decomposed
 
         #show decomposition iterating data
