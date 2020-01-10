@@ -7,7 +7,7 @@ import time as t
 
 def RunTest(network_graph, model_original, model_decomposer, solvers, 
             solve_original = False, solve_decomposed = False, max_iter = 100,
-            validate_feasability = False, recover_feasible = False, 
+            validate_feasability = False, recover_feasible = False, recover_feasible_original = False,
             draw_progress = False, draw_solution = False):
     
     #overall results connection
@@ -137,6 +137,39 @@ def RunTest(network_graph, model_original, model_decomposer, solvers,
                     print(f'Capacity constraint violations number: {cc_vn}')
                     print(f'Route constraint violations number: {rc_vn}')
             print('__________________________________________________________')
+            
+            #recover feasible for given primal routes
+            if recover_feasible_original:
+                solver = solvers['Recovered']
+                start_time_recovered = t.perf_counter()
+                solution = mp.RecoverFeasibleStrain(model_original, routes, solver)
+                elapsed_time_recovered = t.perf_counter() - start_time_recovered
+                if solution is None:
+                    results['Recovered_from_primal'] = None
+                    print('###################!RESULTS!#############################')
+                    print('Recovered_from_primal:\nSolution was not found!')
+                    print('__________________________________________________________')
+                else:
+                    objective, strains, routes, time = ( solution['Objective'], solution['Strain'], 
+                                                        solution['Route'], solution['Time'] )
+
+                    results['Recovered_from_primal'] = { 'Objective': objective, 'Time': time, 'Total time': elapsed_time_recovered }
+
+                    print('###################!RESULTS!#############################')
+                    print(f'Recovered_from_primal:\nObjective: {objective}, Time: {time}, Total time: {elapsed_time_recovered}')
+                    
+                    #validate constraints violations
+                    if validate_feasability:
+                        violations = mp.FindConstraintsViolation(model_original.cmodel, strains, routes)
+                        cc_vn = violations['capacity_constraints'][1]
+                        rc_vn = violations['route_constraints'][1]
+                        if cc_vn == 0 and rc_vn == 0:
+                            print('Feasible')
+                        else:
+                            print(f'Capacity constraint violations number: {cc_vn}')
+                            print(f'Route constraint violations number: {rc_vn}')
+                    print('__________________________________________________________')
+
 
             #draw if needed
             if draw_solution:

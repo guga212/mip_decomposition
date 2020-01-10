@@ -18,7 +18,8 @@ def EstimateObjectvie(rs_model, preserve_feasibility = True):
         return sum(model.FlowRoute[flow, arc] for flow in model.Flows for arc in model.Arcs)
     sp_amodel.RouteObj = pyo.Objective(rule = ObjectiveShortestPathRule, sense = pyo.minimize)
     sp_cmodel = sp_amodel.create_instance(data = rs_model.init_data)
-    sp_solution = sm.GlpkSolver().Solve(sp_cmodel, False)    
+    sp_solver = sm.GlpkSolver()
+    sp_solution = sp_solver.Solve(sp_cmodel, False)    
     if sp_solution == False:
         return None
     sp_route = [ { arc : pyo.value(sp_cmodel.FlowRoute[flow, arc]) for arc in sp_cmodel.Arcs } 
@@ -27,6 +28,7 @@ def EstimateObjectvie(rs_model, preserve_feasibility = True):
     #find feasible flow strains
     if preserve_feasibility:
         feasible_solution = RecoverFeasibleStrain(rs_model, sp_route, sm.IpoptSolver())
+        feasible_solution['Time'] += sp_solver.time
         return feasible_solution
 
     #find maximum flow
@@ -39,5 +41,5 @@ def EstimateObjectvie(rs_model, preserve_feasibility = True):
     for flow in cmodel.FlowStrain:
         cmodel.FlowStrain[flow].fix(minimum_capacity[flow])
     obj_val, strain_val, route_val = sm.isolver.ISolver.ExtractSolution(cmodel)
-    max_solution = { 'Objective': obj_val, 'Strain': strain_val, 'Route': route_val}
+    max_solution = { 'Objective': obj_val, 'Strain': strain_val, 'Route': route_val, 'Time': sp_solver.time}
     return max_solution
