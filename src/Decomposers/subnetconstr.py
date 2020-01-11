@@ -73,7 +73,7 @@ sm_constraint_rules_rhs['SingleFlowConstraintRef'] = 1
 #subnets help variable definition constraint (reformulated model)
 def FlowStrainMulRouteConstraint1RefExprRuleLHS(model, flow, subnet, node_s, node_d):
     return model.FlowStrainMulRoute[flow, subnet, node_s, node_d] \
-    - model.Capacity[node_s, node_d] * model.FlowRoute[flow, subnet, node_s, node_d]
+    - model.FlowUb * model.FlowRoute[flow, subnet, node_s, node_d]
 sm_constraint_rules_lhs['FlowStrainMulRouteConstraint1Ref'] = FlowStrainMulRouteConstraint1RefExprRuleLHS
 sm_constraint_rules_rhs['FlowStrainMulRouteConstraint1Ref'] = 0
 

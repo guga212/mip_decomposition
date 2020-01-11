@@ -48,9 +48,3 @@ class ARoutingStrainModel(pyo.AbstractModel):
         self.InitializeParameters()
         self.InitializeVariables()
         self.InitializeSuffix()
-        
-
-
-        
-                        
-
