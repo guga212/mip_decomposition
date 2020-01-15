@@ -41,7 +41,7 @@ class DHeuristicSolver(IHeuristicSolver):
             time_elapsed  = time.process_time() - start_time_push
         return time_elapsed
 
-    def Solve(self, cmodel):
+    def Solve(self, cmodel, excluded_arcs = []):
 
         cmodel_inst = copy.deepcopy(cmodel)
 
@@ -86,6 +86,11 @@ class DHeuristicSolver(IHeuristicSolver):
 
                 #update distances for the poped node's nieghbors
                 for neighbor in cmodel_inst.NodesOut[current_node]:
+
+                    #ommit excluded arcs
+                    if (flow, current_node, neighbor) in excluded_arcs:
+                        continue
+
                     current_weight = weights[(flow, current_node, neighbor)]
                     distance, sum_time = self.SumWeights(current_distance, current_weight)
                     self.total_time += sum_time

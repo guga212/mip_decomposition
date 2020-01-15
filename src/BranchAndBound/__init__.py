@@ -1,1 +1,2 @@
-from .bnb import BranchAndBoundSolver
+from .bnbra import BranchAndBoundSolverRA
+from .bnbd import BranchAndBoundSolverD
