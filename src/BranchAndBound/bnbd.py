@@ -36,23 +36,6 @@ class BranchAndBoundSolverD(BranchAndBoundSolver):
 
     def BranchModel(self, rs_model):
         branching_rs_models = []
-
-
-        ######MUST_BE_FOR_ALL_FLOWS##########
-        # nonzero_accuracy = 0.01
-        # drawed_flow = rnd.randint(0, len(rs_model.cmodel.Flows) - 1)
-        # nonzero_routes = [fr for fr_indx, fr in rs_model.cmodel.FlowRoute.items() 
-        #                     if fr.value > nonzero_accuracy and fr_indx[0] == drawed_flow ]
-        # branch_number = 2
-        # branch_number = min( len(nonzero_routes), branch_number )
-        # rnd.shuffle(nonzero_routes)
-        # splited_routes = [ nonzero_routes[i * branch_number:(i + 1) * branch_number] 
-        #                     for i in range((len(nonzero_routes) + branch_number - 1) // branch_number ) ]
-        # for sr in splited_routes:
-        #     brs_model = cp.deepcopy(rs_model)
-        #     for r in sr:
-        #         brs_model.excluded_arcs.append(r.index())
-        #     branching_rs_models.append(brs_model)
         nonzero_accuracy = 0.01
         branch_route_len = 1
         for flow in rs_model.cmodel.Flows:

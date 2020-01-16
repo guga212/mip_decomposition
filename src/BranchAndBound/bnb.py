@@ -16,8 +16,9 @@ class BranchAndBoundSolver:
             self.lb = float('-inf')
             self.ub = float('inf')
 
-    def __init__(self, network, flow_bounds):
+    def __init__(self, network, flow_bounds, timeout = 100):
         self.log = True
+        self.timeout = timeout
         self.BranchingCutsName = 'BranchingCuts'
         self.required_precision = 1e-4
         #get network params
@@ -120,6 +121,10 @@ class BranchAndBoundSolver:
             if abs(prim_ub - prim_lb) <= self.required_precision:
                 break
             if len(branching_data[branch_level]) == 0:
+                break
+
+            #timeout
+            if self.total_time >= self.timeout:
                 break
 
         #exit algorithm

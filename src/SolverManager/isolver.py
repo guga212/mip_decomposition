@@ -52,7 +52,8 @@ class ISolver:
     def __init__(self):
         self.solver = None
         self.solution = None
-        self.solver_output = None        
+        self.solver_output = None
+        self.timeout = 2000     
 
     def Solve(self, cmodel, extract_solution = True):
 
@@ -62,7 +63,8 @@ class ISolver:
         solver_ok = (self.solver_output.solver.status == pyo.SolverStatus.ok or
                         self.solver_output.solver.status == pyo.SolverStatus.warning)
         problem_solved = (self.solver_output.solver.termination_condition == pyo.TerminationCondition.optimal or
-                            self.solver_output.solver.termination_condition == pyo.TerminationCondition.maxTimeLimit)
+                            self.solver_output.solver.termination_condition == pyo.TerminationCondition.maxTimeLimit or
+                            self.solver_output.solver.termination_condition == pyo.TerminationCondition.maxIterations)
         if solver_ok and problem_solved:
             self.time = self.solver_output.Solver.Time
             if extract_solution is False:
