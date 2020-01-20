@@ -94,7 +94,7 @@ def RunTest(seed, network_size, formulation, decomposition = 0, coordination = 0
 
 
     #initialize solvers
-    opt_solver = sm.AslBaronSolver()
+    opt_solver = sm.CplexSolver()
     mstr_solver = sm.IpoptSolver()
     rec_solver = sm.IpoptSolver()
 
@@ -131,5 +131,5 @@ def RunTest(seed, network_size, formulation, decomposition = 0, coordination = 0
                 )
 
 
-RunTest(111, NetworkSize.SMALL, FormulationType.ALTERNATIVE, 
-        DecompositionType.SEPVAR, CoordinationType.PROXCP)
+RunTest(111, NetworkSize.SMALL, FormulationType.LINCONSTR, 
+        DecompositionType.DEMAND, CoordinationType.PROXCP )
