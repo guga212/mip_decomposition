@@ -26,7 +26,7 @@ AddConstraintBinary('RouteConstraint', ConstraintRouteExprRuleLHS, ConstraintRou
 def FlowStrainMulRouteConstraint1ExprRuleLHS_c(model, flow, node_s, node_d):
     return -model.FlowStrainMulRoute[flow, node_s, node_d] + model.FlowStrain[flow]
 def FlowStrainMulRouteConstraint1ExprRuleRHS_c(model, flow, node_s, node_d):
-    return model.FlowUb
+    return model.FlowUb[flow]
 AddConstraintContinious('FlowStrainMulRouteConstraint1', FlowStrainMulRouteConstraint1ExprRuleLHS_c, 
                                                         FlowStrainMulRouteConstraint1ExprRuleRHS_c,
                                                         '<=', 'Flows', 'Arcs')
@@ -36,7 +36,7 @@ def FlowStrainMulRouteConstraint1ExprRuleLHS_b(model, flow, node_s, node_d):
     if flow not in model.Flows:
          return 0
     else:
-        return model.FlowUb * model.FlowRoute[flow, node_s, node_d]
+        return model.FlowUb[flow] * model.FlowRoute[flow, node_s, node_d]
 AddConstraintBinary('FlowStrainMulRouteConstraint1', FlowStrainMulRouteConstraint1ExprRuleLHS_b, 0, '<=', 'Flows', 'Arcs')
 
 #continious submodel help variable definition constraint 3
@@ -54,7 +54,7 @@ def FlowStrainMulRouteConstraint4ExprRuleLHS_b(model, flow, node_s, node_d):
     if flow not in model.Flows:
          return 0
     else:
-        return -model.FlowUb * model.FlowRoute[flow, node_s, node_d]
+        return -model.FlowUb[flow] * model.FlowRoute[flow, node_s, node_d]
 AddConstraintBinary('FlowStrainMulRouteConstraint4', FlowStrainMulRouteConstraint4ExprRuleLHS_b, 0, '<=', 'Flows', 'Arcs')
 
 #continious submodel linear capacity constraint
@@ -74,6 +74,6 @@ AddConstraintContinious('FlowStrainMulRouteConstraint1Ref', FlowStrainMulRouteCo
 
 #binary submodel reformulated help variable definition constraint 1
 def FlowStrainMulRouteConstraintRef1ExprRuleLHS_b(model, flow, node_s, node_d):
-    return -model.FlowUb * model.FlowRoute[flow, node_s, node_d]
+    return -model.FlowUb[flow] * model.FlowRoute[flow, node_s, node_d]
 AddConstraintBinary('FlowStrainMulRouteConstraint1Ref', FlowStrainMulRouteConstraintRef1ExprRuleLHS_b,
                                                         0, '<=', 'Flows', 'Arcs')

@@ -8,13 +8,13 @@ sv_objectives['Route'] = ObjectiveBin
 
 def ObjectiveContLin(model):
     return 0 \
-    - model.FlowStrainWeight*sum((1/(model.FlowUb - model.FlowLb)) * (model.FlowStrain[flow] - model.FlowLb) 
+    - model.FlowStrainWeight*sum((1/(model.FlowUbMax - model.FlowLbMin)) * (model.FlowStrain[flow] - model.FlowLbMin) 
                                     for flow in model.Flows)
 sv_objectives['Linear'] = ObjectiveContLin
 
 def ObjectiveContQuad(model):
     return 0\
-    +model.FlowStrainWeight*sum( (model.FlowStrain[flow] - model.FlowUb) ** 2  for flow in model.Flows )
+    +model.FlowStrainWeight*sum( (model.FlowStrain[flow] - model.FlowUbMax) ** 2  for flow in model.Flows )
 sv_objectives['Quadratic'] = ObjectiveContQuad
 
 def ObjectiveContLog(model):

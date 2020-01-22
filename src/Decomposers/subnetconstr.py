@@ -26,9 +26,9 @@ sm_constraint_rules_rhs['CapacityConstraint'] = ConstraintCapacityExprRuleRHS
 #subnets help variable definition constraint 1
 def FlowStrainMulRouteConstraint1ExprRuleLHS(model, flow, subnet, node_s, node_d):
     return -model.FlowStrainMulRoute[flow, subnet, node_s, node_d] + model.FlowStrain[flow, subnet] \
-            +  model.FlowUb * model.FlowRoute[flow, subnet, node_s, node_d]
+            +  model.FlowUb[flow] * model.FlowRoute[flow, subnet, node_s, node_d]
 def FlowStrainMulRouteConstraint1ExprRuleRHS(model, flow, subnet, node_s, node_d):
-    return model.FlowUb
+    return model.FlowUb[flow]
 sm_constraint_rules_lhs['FlowStrainMulRouteConstraint1'] = FlowStrainMulRouteConstraint1ExprRuleLHS
 sm_constraint_rules_rhs['FlowStrainMulRouteConstraint1'] = FlowStrainMulRouteConstraint1ExprRuleRHS
 
@@ -41,7 +41,7 @@ sm_constraint_rules_rhs['FlowStrainMulRouteConstraint3'] = 0
 #subnets help variable definition constraint 4
 def FlowStrainMulRouteConstraint4ExprRuleLHS(model, flow, subnet, node_s, node_d):
     return model.FlowStrainMulRoute[flow, subnet, node_s, node_d] \
-            - model.FlowUb * model.FlowRoute[flow, subnet, node_s, node_d]
+            - model.FlowUb[flow] * model.FlowRoute[flow, subnet, node_s, node_d]
 sm_constraint_rules_lhs['FlowStrainMulRouteConstraint4'] = FlowStrainMulRouteConstraint4ExprRuleLHS
 sm_constraint_rules_rhs['FlowStrainMulRouteConstraint4'] = 0
 
@@ -73,7 +73,7 @@ sm_constraint_rules_rhs['SingleFlowConstraintRef'] = 1
 #subnets help variable definition constraint (reformulated model)
 def FlowStrainMulRouteConstraint1RefExprRuleLHS(model, flow, subnet, node_s, node_d):
     return model.FlowStrainMulRoute[flow, subnet, node_s, node_d] \
-    - model.FlowUb * model.FlowRoute[flow, subnet, node_s, node_d]
+    - model.FlowUb[flow] * model.FlowRoute[flow, subnet, node_s, node_d]
 sm_constraint_rules_lhs['FlowStrainMulRouteConstraint1Ref'] = FlowStrainMulRouteConstraint1RefExprRuleLHS
 sm_constraint_rules_rhs['FlowStrainMulRouteConstraint1Ref'] = 0
 

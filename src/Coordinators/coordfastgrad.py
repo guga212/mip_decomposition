@@ -27,16 +27,16 @@ class CoordinatorFastGradient(Coordinator):
             am.Smoothness = pyo.Param(mutable = True, initialize = 0)
 
             if hasattr(am, 'FlowStrain'):
-                def flow_center_param_init(model, *args):
-                    return model.FlowLb + (model.FlowUb - model.FlowLb) * 0.5
+                def flow_center_param_init(model, flow):
+                    return model.FlowLb[flow] + (model.FlowUb[flow] - model.FlowLb[flow]) * 0.5
                 flow_center_param = pyo.Param(am.FlowStrain.index_set(), mutable = True, initialize = flow_center_param_init)
                 setattr(am, 'FlowStrainCenter', flow_center_param)
             if hasattr(am, 'FlowRoute'):
                 route_center_param = pyo.Param(am.FlowRoute.index_set(), mutable = True, initialize = 0.5)
                 setattr(am, 'FlowRouteCenter', route_center_param)
             if hasattr(am, 'FlowStrainMulRoute'):
-                def artvar_center_param_init(model, *args):
-                    return (model.FlowLb + (model.FlowUb - model.FlowLb) * 0.5)
+                def artvar_center_param_init(model, flow):
+                    return (model.FlowLb[flow] + (model.FlowUb[flow] - model.FlowLb[flow]) * 0.5)
                 artvar_center_param = pyo.Param(am.FlowStrainMulRoute.index_set(), mutable = True, initialize = artvar_center_param_init)
                 setattr(am, 'FlowStrainMulRouteCenter', artvar_center_param)
 

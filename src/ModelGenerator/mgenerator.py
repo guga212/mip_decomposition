@@ -20,8 +20,8 @@ class RsModelGenerator:
     def CreateInitData(self, flows, src_dst, nodes, arcs, capacity, flw_bounds):
         init_data = {None: {
                 'Flows'    : {None : [ indx for indx, val in enumerate(flows) ]},
-                'FlowLb'   : {None : flw_bounds[0]},
-                'FlowUb'   : {None : flw_bounds[1]},
+                'FlowLb'   : {f : flw_bounds[0] for f,_ in enumerate(flows)},
+                'FlowUb'   : {f : flw_bounds[1] for f,_ in enumerate(flows)},
                 'Src'      : {k : v[0] for k, v in src_dst.items()},
                 'Dst'      : {k : v[1] for k, v in src_dst.items()},
                 'Nodes'    : {None : nodes},

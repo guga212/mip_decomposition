@@ -66,10 +66,10 @@ def LinearCapacityConstraintsGenerator():
         def FlowStrainMulRouteConstraint1ExprRuleLHS(model, flow, node_s, node_d):
             """Help variable is greater or equal to the flow if the route exist right hand value. """
             return -model.FlowStrainMulRoute[flow, node_s, node_d] + model.FlowStrain[flow] \
-                    + model.FlowUb * model.FlowRoute[flow, node_s, node_d]
+                    + model.FlowUb[flow] * model.FlowRoute[flow, node_s, node_d]
         def FlowStrainMulRouteConstraint1ExprRuleRHS(model, flow, node_s, node_d):
             """Help variable is greater or equal to the flow if the route exist left hand value. """
-            return model.FlowUb
+            return model.FlowUb[flow]
         AddConstraint(amodel, 'FlowStrainMulRouteConstraint1', FlowStrainMulRouteConstraint1ExprRuleLHS,
                         FlowStrainMulRouteConstraint1ExprRuleRHS, '<=', 'Flows', 'Arcs')
 
@@ -82,7 +82,7 @@ def LinearCapacityConstraintsGenerator():
         def FlowStrainMulRouteConstraint4ExprRuleLHS(model, flow, node_s, node_d):
             """Help variable is less or equal zero if the route doesn't exitst. """
             return model.FlowStrainMulRoute[flow, node_s, node_d] \
-                    - model.FlowUb * model.FlowRoute[flow, node_s, node_d]
+                    - model.FlowUb[flow] * model.FlowRoute[flow, node_s, node_d]
         AddConstraint(amodel, 'FlowStrainMulRouteConstraint4', FlowStrainMulRouteConstraint4ExprRuleLHS, 
                         0, '<=', 'Flows', 'Arcs')
 
@@ -129,7 +129,7 @@ def ReformulatedConstraintsGenerator():
         def FlowStrainMulRouteConstraint1ExprRuleLHS(model, flow, node_s, node_d):
             """Flow_route help variable must be less than capacity if it flows via this edge. """
             return model.FlowStrainMulRoute[flow, node_s, node_d] \
-            - model.FlowUb * model.FlowRoute[flow, node_s, node_d]
+            - model.FlowUb[flow] * model.FlowRoute[flow, node_s, node_d]
         AddConstraint(amodel, 'FlowStrainMulRouteConstraint1Ref', FlowStrainMulRouteConstraint1ExprRuleLHS, 
                         0, '<=', 'Flows', 'Arcs')
 

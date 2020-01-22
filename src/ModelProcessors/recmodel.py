@@ -29,6 +29,8 @@ def RecoverFeasibleStrain(rs_model, routes, solver):
         
     #create concrete instance
     rec_cmodel = rec_amodel.create_instance(data = rs_model.init_data)
+    rec_cmodel.FlowUbMax = rs_model.cmodel.FlowUbMax.value
+    rec_cmodel.FlowLbMin = rs_model.cmodel.FlowLbMin.value
     
     #fix variables
     for indx in routes_updated:

@@ -10,7 +10,7 @@ import math as m
 class BranchAndBoundSolverRA(BranchAndBoundSolver):
     
     def __init__(self, network, flow_bounds):
-        super.__init__(network, flow_bounds)
+        super().__init__(network, flow_bounds)
         self.RouteSolver = sm.GlpkSolver()
         self.FlowRateAllocteSolver = sm.IpoptSolver()
 
@@ -66,14 +66,11 @@ class BranchAndBoundSolverRA(BranchAndBoundSolver):
                                                 self.FlowRateAllocteSolver)
         else:
             cmodel = cp.deepcopy(rs_model.cmodel)
-            minimum_capacity = col.defaultdict(lambda: float('inf'))
             for flow, node_s, node_d in cmodel.FlowRoute:
                 route_val = routes[flow][(node_s, node_d)]
                 cmodel.FlowRoute[(flow, node_s, node_d)].fix(route_val)
-                if route_val >= (1 - 1e-3):
-                    minimum_capacity[flow] = min( [minimum_capacity[flow], cmodel.Capacity[node_s, node_d]] )
             for flow in cmodel.FlowStrain:
-                cmodel.FlowStrain[flow].fix(minimum_capacity[flow])
+                cmodel.FlowStrain[flow].fix(rs_model.cmodel.FlowUb[flow].value)
             obj_val, strain_val, route_val = sm.isolver.ISolver.ExtractSolution(cmodel)
             max_solution = { 'Objective': obj_val, 'Strain': strain_val, 'Route': route_val, 'Time': 0}
             return max_solution

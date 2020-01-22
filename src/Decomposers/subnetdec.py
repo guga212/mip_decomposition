@@ -77,10 +77,12 @@ class ASubNetRoutingStrainModel(mg.ARoutingStrainModel):
         self.Src = pyo.Param(self.Flows, within = pyo.NonNegativeIntegers)
         self.Dst = pyo.Param(self.Flows, within = pyo.NonNegativeIntegers)       
         self.Capacity = pyo.Param(self.RealArcs, within = pyo.NonNegativeReals)
-        self.FlowLb = pyo.Param(within=pyo.NonNegativeReals, mutable = True)
-        self.FlowUb = pyo.Param(within=pyo.NonNegativeReals, mutable = True)        
-        def StrainBoundsRule(model, *args):
-            return ( model.FlowLb, model.FlowUb )
+        self.FlowLb = pyo.Param(self.Flows, within=pyo.NonNegativeReals, mutable = True)
+        self.FlowUb = pyo.Param(self.Flows, within=pyo.NonNegativeReals, mutable = True)
+        self.FlowLbMin = pyo.Param(within=pyo.NonNegativeReals, initialize=lambda model: min(model.FlowLb[flow].value for flow in model.Flows) )
+        self.FlowUbMax = pyo.Param(within=pyo.NonNegativeReals, initialize=lambda model: max(model.FlowUb[flow].value for flow in model.Flows) )
+        def StrainBoundsRule(model, flow, *args):
+            return ( model.FlowLb[flow], model.FlowUb[flow] )
         self.StrainBoundsRule = StrainBoundsRule
 
     def InitializeVariables(self):

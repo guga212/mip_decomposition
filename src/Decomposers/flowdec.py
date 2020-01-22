@@ -32,6 +32,8 @@ class FlowDecomposer(GeneralDecomposer):
             init_data_local[None]['Flows'][None] = [flow]
             init_data_local[None]['Src'] = { k: v for k, v in init_data_local[None]['Src'].items() if k == flow}
             init_data_local[None]['Dst'] = { k: v for k, v in init_data_local[None]['Dst'].items() if k == flow}
+            init_data_local[None]['FlowUb'] = { k: v for k, v in init_data_local[None]['FlowUb'].items() if k == flow}
+            init_data_local[None]['FlowLb'] = { k: v for k, v in init_data_local[None]['FlowLb'].items() if k == flow}
             lrsm.init_data = init_data_local
             lrsm.cmodel = None
             decompose_local_rs_models.append(lrsm)
