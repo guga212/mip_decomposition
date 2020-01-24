@@ -59,7 +59,7 @@ class BranchAndBoundSolverD(BranchAndBoundSolver):
         def BranchFlowRates():
             branching_rs_models = []
             for flow in rs_model.cmodel.Flows:
-                flow_rate_center = 0.5 * (rs_model.cmodel.FlowLb[flow].value + rs_model.cmodel.FlowUb[flow].value)                
+                flow_rate_center = 0.125 * (rs_model.cmodel.FlowLb[flow].value + rs_model.cmodel.FlowUb[flow].value)
                 brs_model_left = cp.deepcopy(rs_model)
                 brs_model_right = cp.deepcopy(rs_model)
                 #branch left

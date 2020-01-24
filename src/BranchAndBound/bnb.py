@@ -60,35 +60,35 @@ class BranchAndBoundSolver:
 
     def __GetStudiedBranches(self):
         
-        def RowSearch():
-            return len(self.branching_data[self.branch_level])
-        def ColumnSearch():
-            column_width = 2
-            return min(len(self.branching_data[self.branch_level]), column_width)            
-
-        if rnd.randint(1, 10) == 1:
-            examined_branches_number = ColumnSearch()
-        else:
-            examined_branches_number = RowSearch()
-        
         enumerated_branching = [ (indx, bd) for indx, bd in enumerate(self.branching_data[self.branch_level]) ]
         unexaminded_branches_data = [ (indx, bd) for indx, bd in enumerated_branching if bd.children_examined == False]
         if len(unexaminded_branches_data) == 0:
             return []
-        rnd.shuffle(unexaminded_branches_data)
-        ubd_slice = unexaminded_branches_data[0:examined_branches_number]
-        return ubd_slice
+
+        def RowSearch():
+            return unexaminded_branches_data
+        def ColumnSearch():
+            column_width = rnd.randint(1, 6)
+            branches_number = min(len(unexaminded_branches_data), column_width)
+            unexaminded_branches_data.sort(key=lambda data: data[1].lb)
+            return unexaminded_branches_data[0: branches_number]
+
+        if rnd.randint(1, 12) == 2:
+            return ColumnSearch()
+        else:
+            return RowSearch()
 
     def __UpdateExaminedLevel(self):
 
         # level's children fully examined            
         for level, bd_list in self.branching_data.items():
-            fully_explored_branches_data = [bd for bd in bd_list if bd.children_examined == True]            
-            if len(fully_explored_branches_data) == len(bd_list):
-                self.branching_levels_fully_explored[level] = True
-            else:
-                self.branching_levels_fully_explored[level] = False
-        
+            fully_explored_branches_data = [bd for bd in bd_list if bd.examined == True]
+            level_explored = len(bd_list) > 0 and len(fully_explored_branches_data) == len(bd_list)
+            if level > 0:
+                previous_level_explored = self.branching_levels_fully_explored[level - 1]
+                level_explored = level_explored and previous_level_explored                                                            
+            self.branching_levels_fully_explored[level] = level_explored
+                    
         # update global lower bounds for every examined level
         for level, is_explored in self.branching_levels_fully_explored.items():
             if is_explored:
@@ -99,9 +99,10 @@ class BranchAndBoundSolver:
 
         # no branches on the next level
         if len(self.branching_data[self.branch_level + 1]) == 0:
-            nonexamined_levels = [lvl for lvl, ex in self.branching_levels_fully_explored.items() if ex == False]
-            if len(nonexamined_levels) > 0:
-                lowest_nonexamined_level = max(nonexamined_levels)
+            none_examined_levels = [lvl for lvl, bd_list in self.branching_data.items() 
+                                    if len([bd for bd in bd_list if bd.examined == False]) > 0]
+            if len(none_examined_levels) > 0:
+                lowest_nonexamined_level = max(none_examined_levels)
                 self.branch_level = lowest_nonexamined_level
             else:
                 self.out_of_branches = True
@@ -163,8 +164,8 @@ class BranchAndBoundSolver:
                     while parent_iter is not None:
                         if parent_iter.children_examined:
                             children_lb_list = [bcd.lb for bcd in parent_iter.children_list if bcd.lb is not None]
-                            children_lb = min(children_lb_list) if len(children_lb_list) else float('inf')
-                            if children_lb < parent_iter.lb: 
+                            children_lb = min(children_lb_list) if len(children_lb_list) else float('-inf')
+                            if children_lb > parent_iter.lb: 
                                 parent_iter.lb = children_lb
                                 parent_iter = parent_iter.parent
                                 continue
@@ -187,7 +188,7 @@ class BranchAndBoundSolver:
                     continue
 
                 # check exit optimality
-                if bd.lb == bd.ub:
+                if abs(bd.ub - bd.lb) < 1e-5:
                     continue
 
                 # add branching
