@@ -8,9 +8,8 @@ import TestFramework as tf
 from enum import IntEnum
 
 class NetworkSize(IntEnum):
-    SMALL = 0
-    MEDIUM = 1
-    LARGE = 2
+    MEDIUM = 0
+    LARGE = 1
 
 class FormulationType(IntEnum):
     ORIGINAL = 0
@@ -32,7 +31,7 @@ class CoordinationType(IntEnum):
 def RunTest(seed, network_size, formulation, decomposition = 0, coordination = 0):
 
     #desribe run
-    network_description = ['Small', 'Large']
+    network_description = ['Medium', 'Large']
     formulations_description = ['Original', 'Linearized Constraints', 'Alternative']
     decomposition_description = ['Solve undecomposed', 'Demands', 'Subnetworks', 'Variable separating']
     coordination_description = ['Solve unrelaxed', 'Proximal cutting planes', 'Subgradient level evaluation']
@@ -50,16 +49,7 @@ def RunTest(seed, network_size, formulation, decomposition = 0, coordination = 0
     #random network
     net.NetworkGraph.SetRandomSeed(seed)
 
-    networks = [None, None, None]
-
-    #Network small
-    world_init_data = [ {'NodesNumber': 3, 'EdgesNumber': 8,  'ExternalEdgesNumber': 3 }, 
-                          {'NodesNumber': 6, 'EdgesNumber': 4,  'ExternalEdgesNumber': 2 },
-                          {'NodesNumber': 4, 'EdgesNumber': 6,  'ExternalEdgesNumber': 1 },
-                          {'NodesNumber': 1, 'EdgesNumber': 3,  'ExternalEdgesNumber': 1 }
-                        ]
-    networks[0] = net.NetworkGraph.GenerateSmallWorld(world_init_data, *CAPACITY_BOUNDS)
-    networks[0].GenerateRandomSrcDst(4)
+    networks = [None, None]
 
     #Network medium
     world_init_data = [ {'NodesNumber': 3, 'EdgesNumber': 8,  'ExternalEdgesNumber': 3 }, 
@@ -67,10 +57,10 @@ def RunTest(seed, network_size, formulation, decomposition = 0, coordination = 0
                         {'NodesNumber': 6, 'EdgesNumber': 22,  'ExternalEdgesNumber': 2 },
                          {'NodesNumber': 4, 'EdgesNumber': 12,  'ExternalEdgesNumber': 2 }
                         ]
-    networks[1] = net.NetworkGraph.GenerateSmallWorld(world_init_data, *CAPACITY_BOUNDS)
-    networks[1].GenerateRandomSrcDst(12)
+    networks[0] = net.NetworkGraph.GenerateSmallWorld(world_init_data, *CAPACITY_BOUNDS)
+    networks[0].GenerateRandomSrcDst(12)
 
-    #Network medium
+    #Network large
     world_init_data = [ {'NodesNumber': 3, 'EdgesNumber': 8,  'ExternalEdgesNumber': 3 }, 
                         {'NodesNumber': 12, 'EdgesNumber': 32, 'ExternalEdgesNumber': 3 },
                         {'NodesNumber': 6, 'EdgesNumber': 22,  'ExternalEdgesNumber': 2 },
@@ -80,8 +70,8 @@ def RunTest(seed, network_size, formulation, decomposition = 0, coordination = 0
                          {'NodesNumber': 4, 'EdgesNumber': 12,  'ExternalEdgesNumber': 1 },
                          {'NodesNumber': 3, 'EdgesNumber': 6,  'ExternalEdgesNumber': 1 },
                         ]
-    networks[2] = net.NetworkGraph.GenerateSmallWorld(world_init_data, *CAPACITY_BOUNDS)
-    networks[2].GenerateRandomSrcDst(32)
+    networks[1] = net.NetworkGraph.GenerateSmallWorld(world_init_data, *CAPACITY_BOUNDS)
+    networks[1].GenerateRandomSrcDst(32)
      
     network = networks[network_size]
 
@@ -133,13 +123,16 @@ def RunTest(seed, network_size, formulation, decomposition = 0, coordination = 0
         decomposed_solvers = [opt_solver, opt_solver]
         decomposer = dec.SepVarDecomposer(rs_model, coordinator)
 
+    #deduce run parameter
+    run_decomposition = (coordination != 0) and (decomposition != 0)
+    run_original = not run_decomposition
+
     #run computation
     tf.RunTest( network, rs_model, decomposer, { 'Original': opt_solver, 'Recovered': rec_solver, 'Master': mstr_solver, 
                                                 'Decomposed': decomposed_solvers }, 
-                solve_original=(coordination == 0), solve_decomposed=(coordination != 0), max_iter=25, 
+                solve_original=run_original, solve_decomposed=run_decomposition, max_iter=25, 
                 validate_feasability=True, recover_feasible=True, draw_progress=True, draw_solution=False
                 )
 
 
-RunTest(111, NetworkSize.SMALL, FormulationType.LINCONSTR, 
-        DecompositionType.DEMAND, CoordinationType.PROXCP )
+RunTest(111, NetworkSize.MEDIUM, FormulationType.LINCONSTR)
